@@ -1,0 +1,38 @@
+{
+  "name": "adscale-store",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:migrate": "tsx db/migrate.ts",
+    "db:reset": "tsx db/migrate.ts",
+    "test:delivery": "tsx db/test-delivery.ts"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "jose": "^6.2.3",
+    "jsonwebtoken": "^9.0.3",
+    "next": "^15.5.19",
+    "qrcode.react": "^4.2.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "resend": "^6.12.4"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "22.10.7",
+    "@types/react": "19.0.7",
+    "@types/react-dom": "19.0.3",
+    "autoprefixer": "10.4.20",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.4.2",
+    "postcss": "8.5.1",
+    "tailwindcss": "3.4.17",
+    "tsx": "^4.22.4",
+    "typescript": "5.7.3"
+  }
+}
