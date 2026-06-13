@@ -22,10 +22,10 @@ export const products: Product[] = [
     name: "Starter Threshold Account",
     price: "$50",
     popular: false,
-    desc: "A Google Ads account with the billing threshold unlocked at €10. $5 already spent — ready to run campaigns immediately. Also eligible for the €400 free credit promo.",
+    desc: "A Google Ads account with the billing threshold unlocked at €10. €5 already spent — ready to run campaigns immediately. Also eligible for the €400 free credit promo.",
     features: [
       "€10 billing threshold unlocked",
-      "$5 already spent on the account",
+      "€5 already spent on the account",
       "Run ads now, pay Google later",
       "Login + recovery details included",
       "Instant .txt delivery after payment",
@@ -39,10 +39,10 @@ export const products: Product[] = [
     name: "Pro Threshold Account",
     price: "$75",
     popular: true,
-    desc: "Higher-tier account with a €50 billing threshold and $10 already spent — more spending room before Google charges you. Also eligible for the €400 free credit promo.",
+    desc: "Higher-tier account with a €50 billing threshold and €10 already spent — more spending room before Google charges you. Also eligible for the €400 free credit promo.",
     features: [
       "€50 billing threshold unlocked",
-      "$10 already spent on the account",
+      "€10 already spent on the account",
       "Run ads now, pay Google later",
       "Extended account age & history",
       "Instant .txt delivery after payment",
@@ -59,7 +59,7 @@ export const faqs: Faq[] = [
   },
   {
     q: "What's the difference between Starter and Pro?",
-    a: "The Starter has a €10 threshold with $5 already spent — great for testing or small campaigns. The Pro has a €50 threshold with $10 spent — more room to scale before Google bills you, plus a longer account history for better trust signals.",
+    a: "The Starter has a €10 threshold with €5 already spent — great for testing or small campaigns. The Pro has a €50 threshold with €10 spent — more room to scale before Google bills you, plus a longer account history for better trust signals.",
   },
   {
     q: "What about the €400 free credit promo?",

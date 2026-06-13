@@ -88,8 +88,8 @@ async function runMigration() {
     await pool.query(
       `INSERT INTO products (id, name, description, price, threshold_value, category, low_stock_alert, active)
        VALUES
-         ('starter', 'Starter Threshold Account', 'Google Ads account with $5 already spent — eligible for the €400 free credit promo. Buy for $50, unlock up to €400 in free ads. 8x ROI potential.', 50 * 100, 10, 'threshold', 5, true),
-         ('pro', 'Pro Threshold Account', 'Higher-tier account with $10 spent and a €50 threshold — promo-eligible with more spending room. Buy for $75, unlock up to €400 in free ads. Best value.', 75 * 100, 50, 'threshold', 5, true)
+         ('starter', 'Starter Threshold Account', 'Google Ads account with €5 already spent — eligible for the €400 free credit promo. Buy for $50, unlock up to €400 in free ads. 8x ROI potential.', 50 * 100, 10, 'threshold', 5, true),
+         ('pro', 'Pro Threshold Account', 'Higher-tier account with €10 spent and a €50 threshold — promo-eligible with more spending room. Buy for $75, unlock up to €400 in free ads. Best value.', 75 * 100, 50, 'threshold', 5, true)
        ON CONFLICT (id) DO NOTHING`
     );
     console.log('✅ 2 products created\n');

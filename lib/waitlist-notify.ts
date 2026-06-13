@@ -21,12 +21,13 @@ export interface NotifyResult {
 export async function notifyWaitlist(productId: string): Promise<NotifyResult> {
   const empty: NotifyResult = { pending: 0, emailed: 0, emailFailed: 0, telegram: 'skipped' };
 
-  const products = await query<{ id: string; name: string }>(
-    'SELECT id, name FROM products WHERE id = $1',
+  const products = await query<{ id: string; name: string; price: number }>(
+    'SELECT id, name, price FROM products WHERE id = $1',
     [productId]
   );
   if (products.length === 0) return empty;
   const product = products[0];
+  const priceLabel = `$${(product.price / 100).toFixed(0)}`;
 
   const entries = await query<{ id: string; email: string | null; telegram_username: string | null }>(
     `SELECT id, email, telegram_username
@@ -49,7 +50,7 @@ export async function notifyWaitlist(productId: string): Promise<NotifyResult> {
     if (seenEmails.has(key)) continue;
     seenEmails.add(key);
 
-    const result = await sendRestockEmail(entry.email, product.name, productUrl);
+    const result = await sendRestockEmail(entry.email, product.name, productUrl, priceLabel);
     if (result.success) emailed++;
     else emailFailed++;
   }
@@ -57,7 +58,7 @@ export async function notifyWaitlist(productId: string): Promise<NotifyResult> {
   // ─── One Telegram channel broadcast ────────────────────────────────────────
   const tgText =
     `🔔 <b>${escapeHtml(product.name)}</b> is back in stock!\n\n` +
-    `Limited quantity — grab yours now.\n` +
+    `💰 <b>${priceLabel}</b> — limited quantity, grab yours now.\n` +
     `👉 ${appUrl}`;
   const tg = await sendTelegramChannelMessage(tgText);
   const telegram: NotifyResult['telegram'] = tg.success ? 'sent' : tg.skipped ? 'skipped' : 'failed';

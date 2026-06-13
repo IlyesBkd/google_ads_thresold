@@ -30,7 +30,7 @@ async function getProducts(): Promise<Product[]> {
       desc: p.description,
       features: [
         "€400 free credit promo eligible",
-        `$${p.threshold_value >= 50 ? "10" : "5"} already spent on the account`,
+        `€${p.threshold_value >= 50 ? "10" : "5"} already spent on the account`,
         `€${p.threshold_value} billing threshold unlocked`,
         "Login + recovery details included",
         "Instant .txt delivery after payment",

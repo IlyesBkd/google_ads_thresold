@@ -48,6 +48,15 @@ export default function WaitlistPage({
   const totalPending = Object.values(statsByProduct).reduce((sum, s) => sum + s.pending, 0);
   const totalNotified = Object.values(statsByProduct).reduce((sum, s) => sum + s.notified, 0);
 
+  // Unique collected emails (deduplicated, case-insensitive), respecting current filters
+  const collectedEmails = Array.from(
+    new Map(
+      filteredWaitlist
+        .filter((e) => e.email)
+        .map((e) => [e.email!.toLowerCase(), e.email!])
+    ).values()
+  );
+
   // Products that actually have waitlist entries, for per-product cards/buttons
   const productIdsWithEntries = Object.keys(statsByProduct);
 
@@ -116,6 +125,39 @@ export default function WaitlistPage({
             <div style={{ fontSize: 32, fontWeight: 600, color: COLORS.primary }}>{statsByProduct[pid]?.pending || 0}</div>
           </div>
         ))}
+      </div>
+
+      {/* Collected emails — quick readable view */}
+      <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "18px 20px", marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>
+            Collected emails <span style={{ color: COLORS.textMuted, fontWeight: 400 }}>({collectedEmails.length})</span>
+          </div>
+          <div style={{ fontSize: 12, color: COLORS.textMuted }}>Unique · follows filters above</div>
+        </div>
+        {collectedEmails.length === 0 ? (
+          <div style={{ fontSize: 13, color: COLORS.textMuted }}>No emails collected yet.</div>
+        ) : (
+          <div
+            style={{
+              maxHeight: 180,
+              overflowY: "auto",
+              background: "#080808",
+              border: `1px solid ${COLORS.border}`,
+              borderRadius: 8,
+              padding: "12px 14px",
+              fontFamily: "var(--font-mono)",
+              fontSize: 12,
+              color: COLORS.textSecondary,
+              lineHeight: 1.7,
+              userSelect: "text",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-all",
+            }}
+          >
+            {collectedEmails.join("\n")}
+          </div>
+        )}
       </div>
 
       <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>

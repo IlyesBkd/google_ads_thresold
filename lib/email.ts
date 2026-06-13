@@ -207,15 +207,16 @@ This is an automated email. Do not reply to this address.
 export async function sendRestockEmail(
   customerEmail: string,
   productName: string,
-  productUrl: string
+  productUrl: string,
+  price?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await getResend().emails.send({
       from: FROM_EMAIL,
       to: customerEmail,
       subject: `${productName} is back in stock — GadScale`,
-      html: getRestockEmailHtml({ productName, productUrl }),
-      text: getRestockEmailText({ productName, productUrl }),
+      html: getRestockEmailHtml({ productName, productUrl, price }),
+      text: getRestockEmailText({ productName, productUrl, price }),
     });
     return { success: true };
   } catch (error) {
@@ -227,9 +228,11 @@ export async function sendRestockEmail(
 function getRestockEmailHtml({
   productName,
   productUrl,
+  price,
 }: {
   productName: string;
   productUrl: string;
+  price?: string;
 }) {
   return `
 <!DOCTYPE html>
@@ -252,8 +255,9 @@ function getRestockEmailHtml({
       <p style="margin: 0 0 28px; font-size: 15px; line-height: 1.6; color: #9A9A9A;">
         Good news — the <strong style="color: #FAFAFA;">${productName}</strong> you were waiting for is available again. Stock is limited and sells fast.
       </p>
+      ${price ? `<div style="font-size: 30px; font-weight: 700; color: #FAFAFA; margin-bottom: 24px;">${price}</div>` : ''}
       <a href="${productUrl}" style="display: inline-block; padding: 14px 28px; background: #4285F4; color: #fff; border-radius: 11px; font-size: 15px; font-weight: 600; text-decoration: none;">
-        Buy now
+        Buy now${price ? ` — ${price}` : ''}
       </a>
     </div>
 
@@ -275,16 +279,18 @@ function getRestockEmailHtml({
 function getRestockEmailText({
   productName,
   productUrl,
+  price,
 }: {
   productName: string;
   productUrl: string;
+  price?: string;
 }) {
   return `
 GADSCALE — Back in stock
 
 Good news — the ${productName} you were waiting for is available again.
 Stock is limited and sells fast.
-
+${price ? `\nPrice: ${price}\n` : ''}
 Buy now: ${productUrl}
 
 ---
