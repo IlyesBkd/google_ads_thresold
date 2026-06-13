@@ -5,10 +5,13 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { JWT_EXPIRATION } from './constants';
 
-if (!process.env.JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required');
+function getSecret(): Uint8Array {
+  const jwt = process.env.JWT_SECRET;
+  if (!jwt) {
+    throw new Error('JWT_SECRET environment variable is required');
+  }
+  return new TextEncoder().encode(jwt);
 }
-const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export interface JWTPayload {
   adminId: string;
@@ -24,7 +27,7 @@ export async function signToken(payload: JWTPayload): Promise<string> {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(JWT_EXPIRATION)
-    .sign(secret);
+    .sign(getSecret());
 
   return token;
 }
@@ -34,7 +37,7 @@ export async function signToken(payload: JWTPayload): Promise<string> {
  */
 export async function verifyToken(token: string): Promise<JWTPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, getSecret());
     return payload as unknown as JWTPayload;
   } catch (error) {
     return null;
