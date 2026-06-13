@@ -1,11 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  products as staticProducts,
-  faqs,
-  type Product,
-} from "@/lib/data";
+import { faqs, type Product } from "@/lib/data";
 import Navbar from "./Navbar";
 import Hero from "./Hero";
 import Pricing from "./Pricing";
@@ -13,27 +9,11 @@ import Faq from "./Faq";
 import Footer from "./Footer";
 import CheckoutModal from "./CheckoutModal";
 
-export default function HomePage() {
+export default function HomePage({ initialProducts }: { initialProducts: Product[] }) {
   const [isMobile, setIsMobile] = useState(false);
   const [openFaq, setOpenFaq] = useState(0);
   const [checkout, setCheckout] = useState<Product | null>(null);
-  const [products, setProducts] = useState<Product[]>(staticProducts);
-
-  // Fetch products from DB (overrides static data with live prices)
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const response = await fetch("/api/public/products");
-        const data = await response.json();
-        if (data.success && data.data.length > 0) {
-          setProducts(data.data);
-        }
-      } catch {
-        // Keep static fallback
-      }
-    };
-    fetchProducts();
-  }, []);
+  const products = initialProducts;
 
   // responsive: hide nav links under 760px (matches prototype breakpoint)
   useEffect(() => {

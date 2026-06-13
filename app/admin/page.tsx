@@ -81,18 +81,16 @@ export default function AdminPage() {
 
   // Settings state
   const [settings, setSettings] = useState({
-    wallet_btc: '',
-    wallet_eth: '',
-    wallet_usdt: '',
     min_alert_350: '5',
     min_alert_500: '5',
     download_validity_hours: '24',
     download_max_uses: '3',
-    discord_webhook_url: '',
     telegram_username: '',
+    telegram_bot_token: '',
+    telegram_channel_id: '',
   });
   const [settingsSaving, setSettingsSaving] = useState(false);
-  const [discordTesting, setDiscordTesting] = useState(false);
+  const [telegramTesting, setTelegramTesting] = useState(false);
 
   // Toast
   const [toast, setToast] = useState({ message: "", visible: false });
@@ -222,18 +220,43 @@ export default function AdminPage() {
     const data = await response.json();
     if (data.success && data.data) {
       setSettings({
-        wallet_btc: data.data.wallet_btc || '',
-        wallet_eth: data.data.wallet_eth || '',
-        wallet_usdt: data.data.wallet_usdt || '',
         min_alert_350: data.data.min_alert_350 || '5',
         min_alert_500: data.data.min_alert_500 || '5',
         download_validity_hours: data.data.download_validity_hours || '24',
         download_max_uses: data.data.download_max_uses || '3',
-        discord_webhook_url: data.data.discord_webhook_url || '',
         telegram_username: data.data.telegram_username || '',
+        telegram_bot_token: data.data.telegram_bot_token || '',
+        telegram_channel_id: data.data.telegram_channel_id || '',
       });
     }
   }, []);
+
+  const testTelegram = useCallback(async () => {
+    setTelegramTesting(true);
+    try {
+      // Save current settings first so the test uses the latest token/channel
+      await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          settings: {
+            telegram_bot_token: settings.telegram_bot_token,
+            telegram_channel_id: settings.telegram_channel_id,
+          },
+        }),
+      });
+      const response = await fetch('/api/admin/telegram/test', { method: 'POST' });
+      const data = await response.json();
+      if (data.success) {
+        showToast('✅ Test message posted to your Telegram channel');
+      } else {
+        showToast(`❌ ${data.error || 'Telegram test failed'}`);
+      }
+    } catch {
+      showToast('❌ Network error');
+    }
+    setTelegramTesting(false);
+  }, [settings.telegram_bot_token, settings.telegram_channel_id, showToast]);
 
   const saveSettings = useCallback(async () => {
     setSettingsSaving(true);
@@ -251,30 +274,6 @@ export default function AdminPage() {
       showToast(data.error || 'Failed to save settings');
     }
   }, [settings, showToast]);
-
-  const testDiscordWebhook = useCallback(async () => {
-    if (!settings.discord_webhook_url) {
-      showToast('Please enter a Discord webhook URL first');
-      return;
-    }
-
-    setDiscordTesting(true);
-    try {
-      const response = await fetch('/api/admin/discord/test', {
-        method: 'POST',
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        showToast('✅ Test notification sent! Check your Discord channel');
-      } else {
-        showToast(`❌ ${data.error || 'Failed to send test notification'}`);
-      }
-    } catch (error) {
-      showToast('❌ Network error');
-    }
-    setDiscordTesting(false);
-  }, [settings.discord_webhook_url, showToast]);
 
   const loadAllData = useCallback(async () => {
     setLoading(true);
@@ -386,7 +385,6 @@ export default function AdminPage() {
         <div style={loginCard}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
             <BarsMark size={32} />
-            <span style={{ fontSize: 20, fontWeight: 700, color: COLORS.text, letterSpacing: 1.5 }}>THRESHOLDS</span>
           </div>
           <p style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: 32 }}>Admin panel. Sessions are JWT-based.</p>
           <div style={{ marginBottom: 20 }}>
@@ -966,30 +964,6 @@ export default function AdminPage() {
     return (
       <div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
-          {/* Crypto wallets */}
-          <div style={cardStyle}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: COLORS.text, marginBottom: 20 }}>Crypto wallets</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {[
-                { coin: "BTC", key: "wallet_btc", color: "#F7931A" },
-                { coin: "ETH", key: "wallet_eth", color: "#627EEA" },
-                { coin: "USDT", key: "wallet_usdt", color: "#26A17B" },
-              ].map((w) => (
-                <div key={w.coin}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: w.color, background: `${w.color}20`, padding: "2px 8px", borderRadius: 999, fontFamily: "var(--font-mono)" }}>{w.coin}</span>
-                  </div>
-                  <input
-                    value={settings[w.key as keyof typeof settings]}
-                    onChange={(e) => setSettings({ ...settings, [w.key]: e.target.value })}
-                    style={inputStyle}
-                    placeholder={`Enter ${w.coin} wallet address`}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Stock & Delivery */}
           <div style={cardStyle}>
             <div style={{ fontSize: 15, fontWeight: 600, color: COLORS.text, marginBottom: 20 }}>Stock & delivery</div>
@@ -1078,36 +1052,58 @@ export default function AdminPage() {
                 placeholder="@your_telegram_username"
               />
             </div>
+          </div>
+        </div>
+
+        {/* Restock notifications */}
+        <div style={cardStyle}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: COLORS.text, marginBottom: 6 }}>Restock notifications</div>
+          <p style={{ margin: "0 0 18px", fontSize: 12, color: COLORS.textMuted, lineHeight: 1.5 }}>
+            When you import new stock, waitlist customers are emailed automatically and a message is posted to your Telegram channel.
+            Create a bot with @BotFather, add it as an admin of your channel, then paste the details here.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
-              <label style={labelStyle}>Discord webhook (stock alerts)</label>
+              <label style={labelStyle}>Telegram bot token</label>
+              <input
+                type="password"
+                value={settings.telegram_bot_token}
+                onChange={(e) => setSettings({ ...settings, telegram_bot_token: e.target.value })}
+                style={inputStyle}
+                placeholder="123456789:ABCdef..."
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Telegram channel ID</label>
               <div style={{ display: "flex", gap: 8 }}>
                 <input
-                  value={settings.discord_webhook_url}
-                  onChange={(e) => setSettings({ ...settings, discord_webhook_url: e.target.value })}
+                  value={settings.telegram_channel_id}
+                  onChange={(e) => setSettings({ ...settings, telegram_channel_id: e.target.value })}
                   style={{ ...inputStyle, flex: 1 }}
-                  placeholder="https://discord.com/api/webhooks/..."
+                  placeholder="@your_channel  or  -1001234567890"
                 />
                 <button
-                  onClick={testDiscordWebhook}
-                  disabled={discordTesting || !settings.discord_webhook_url}
+                  onClick={testTelegram}
+                  disabled={telegramTesting || !settings.telegram_bot_token || !settings.telegram_channel_id}
                   style={{
                     padding: "0 16px",
-                    background: discordTesting || !settings.discord_webhook_url ? COLORS.border : "#5865F2",
+                    background: telegramTesting || !settings.telegram_bot_token || !settings.telegram_channel_id ? COLORS.border : "#0088cc",
                     color: "#fff",
                     border: "none",
                     borderRadius: 8,
                     fontSize: 13,
                     fontWeight: 600,
-                    cursor: discordTesting || !settings.discord_webhook_url ? "not-allowed" : "pointer",
+                    cursor: telegramTesting || !settings.telegram_bot_token || !settings.telegram_channel_id ? "not-allowed" : "pointer",
                     fontFamily: "var(--font-inter)",
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {discordTesting ? "Testing..." : "Test"}
+                  {telegramTesting ? "Testing..." : "Test"}
                 </button>
               </div>
               <p style={{ margin: "6px 0 0", fontSize: 11, color: COLORS.textMuted }}>
-                Get notified for sales, low stock, and errors
+                Leave both empty to disable Telegram broadcasts (email still works).
               </p>
             </div>
           </div>
@@ -1408,6 +1404,7 @@ export default function AdminPage() {
         return (
           <WaitlistPage
             waitlist={waitlist}
+            products={products}
             waitlistFilter={waitlistFilter}
             waitlistProductFilter={waitlistProductFilter}
             onFilterChange={setWaitlistFilter}

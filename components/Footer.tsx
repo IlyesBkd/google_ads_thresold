@@ -25,7 +25,7 @@ export default function Footer() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <BarsMark variant="footer" />
-          <span>© 2026 GADSCALE</span>
+          <span>© 2026 GadScale</span>
         </div>
         <div style={{ display: "flex", gap: "22px", flexWrap: "wrap" }}>
           <a href="#pricing" className="footer-link" style={{ color: "#6A6A6A", textDecoration: "none" }}>
@@ -40,11 +40,11 @@ export default function Footer() {
           <a href="#" className="footer-link" style={{ color: "#6A6A6A", textDecoration: "none" }}>
             Terms
           </a>
-          <a href="#" className="footer-link" style={{ color: "#6A6A6A", textDecoration: "none" }}>
-            Discord
+          <a href="https://t.me/Selling_GAds" target="_blank" rel="noopener noreferrer" className="footer-link" style={{ color: "#6A6A6A", textDecoration: "none" }}>
+            Telegram
           </a>
         </div>
-        <span>Crypto only · Discord support</span>
+        <span>Crypto only · Telegram support</span>
       </div>
     </footer>
   );

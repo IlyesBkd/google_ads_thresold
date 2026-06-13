@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const ALLOWED_ORIGINS = [
-  process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+  'http://localhost:3000',
+  ...(process.env.NEXT_PUBLIC_APP_URL ? [process.env.NEXT_PUBLIC_APP_URL] : []),
 ];
 
 function getSecurityHeaders(): Record<string, string> {
@@ -31,13 +32,22 @@ export function middleware(request: NextRequest) {
   // CORS/Origin validation for API routes (except webhook which receives external calls)
   if (pathname.startsWith('/api/') && !pathname.startsWith('/api/crypto/webhook')) {
     const origin = request.headers.get('origin');
+    const host = request.headers.get('host');
 
-    if (origin && !ALLOWED_ORIGINS.includes(origin)) {
-      return new NextResponse(null, {
-        status: 403,
-        statusText: 'Forbidden',
-        headers: { 'Content-Type': 'application/json' },
-      });
+    // Allow same-origin requests (front-end and API served from the same host,
+    // whatever the port/domain actually is) plus the explicit allowlist.
+    let sameOrigin = false;
+    try {
+      sameOrigin = Boolean(origin && host && new URL(origin).host === host);
+    } catch {
+      sameOrigin = false;
+    }
+
+    if (origin && !sameOrigin && !ALLOWED_ORIGINS.includes(origin)) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden origin' },
+        { status: 403 }
+      );
     }
   }
 

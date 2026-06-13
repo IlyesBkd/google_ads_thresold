@@ -94,39 +94,17 @@ async function runMigration() {
     );
     console.log('✅ 2 products created\n');
 
-    // ─── 5. Insert sample stock ──────────────────────────────────────────────
-    console.log('📥 Creating sample stock...');
-    const sampleStock = [
-      { productId: 'PROD-350', email: 'threshold.acc88@gmail.com', password: 'Ads!Thresh88x' },
-      { productId: 'PROD-350', email: 'googleads.user001@gmail.com', password: 'Thr3sh0ld!2024' },
-      { productId: 'PROD-350', email: 'adspro.buyer42@gmail.com', password: 'G00gl3Ads$ecure' },
-      { productId: 'PROD-500', email: 'gads.premium19@gmail.com', password: 'Pr3m1um#Gads19' },
-      { productId: 'PROD-500', email: 'adsthresh.elite7@gmail.com', password: 'El1te7!Threshold' },
-      { productId: 'PROD-500', email: 'threshold.500pro@gmail.com', password: '500Pr0!G00gle' },
-    ];
-
-    for (const item of sampleStock) {
-      await pool.query(
-        `INSERT INTO stock_items (product_id, email, password, status)
-         VALUES ($1, $2, $3, 'available')
-         ON CONFLICT (email, product_id) DO NOTHING`,
-        [item.productId, item.email, item.password]
-      );
-    }
-    console.log('✅ 6 sample credentials created\n');
-
-    // ─── 6. Insert default settings ──────────────────────────────────────────
+    // ─── 5. Insert default settings ──────────────────────────────────────────
     console.log('⚙️  Creating default settings...');
     const defaultSettings = [
-      { key: 'wallet_btc', value: process.env.NEXT_PUBLIC_WALLET_BTC || 'bc1q8c6f92ptnvz0e7yd3k4r5s9w2x8m4l0q7h3n6' },
-      { key: 'wallet_eth', value: process.env.NEXT_PUBLIC_WALLET_ETH || '0x71C7656EC7ab88b098defB751B7401B5f6d8976F' },
-      { key: 'wallet_usdt', value: process.env.NEXT_PUBLIC_WALLET_USDT || 'TQn9Y2khEsLJW1ChVWFMSMeRDow5Kcbk8e' },
       { key: 'min_alert_350', value: '5' },
       { key: 'min_alert_500', value: '5' },
       { key: 'download_validity_hours', value: process.env.DOWNLOAD_LINK_VALIDITY_HOURS || '24' },
       { key: 'download_max_uses', value: process.env.DOWNLOAD_LINK_MAX_USES || '3' },
       { key: 'discord_webhook_url', value: process.env.DISCORD_WEBHOOK_URL || '' },
-      { key: 'telegram_username', value: process.env.TELEGRAM_SUPPORT_USERNAME || '@gadscale_support' },
+      { key: 'telegram_username', value: process.env.TELEGRAM_SUPPORT_USERNAME || '@Selling_GAds' },
+      { key: 'telegram_bot_token', value: process.env.TELEGRAM_BOT_TOKEN || '' },
+      { key: 'telegram_channel_id', value: process.env.TELEGRAM_CHANNEL_ID || '' },
     ];
 
     for (const setting of defaultSettings) {
@@ -139,13 +117,7 @@ async function runMigration() {
     }
     console.log('✅ Default settings created\n');
 
-    // ─── 7. Insert initial log ───────────────────────────────────────────────
-    await pool.query(
-      `INSERT INTO logs (type, message, admin_id)
-       VALUES ('import', 'Database seeded with 2 products and 6 sample credentials', 'admin-001')`
-    );
-
-    // ─── 7. Verify setup ─────────────────────────────────────────────────────
+    // ─── 6. Verify setup ─────────────────────────────────────────────────────
     const productCount = await pool.query('SELECT COUNT(*) as count FROM products');
     const stockCount = await pool.query("SELECT COUNT(*) as count FROM stock_items WHERE status = 'available'");
     const adminCount = await pool.query('SELECT COUNT(*) as count FROM admins');

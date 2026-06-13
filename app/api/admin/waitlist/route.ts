@@ -2,6 +2,7 @@ import { getErrorMessage } from '@/lib/errors';
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { requireAuth } from "@/lib/jwt";
+import { notifyWaitlist } from "@/lib/waitlist-notify";
 
 // GET: Retrieve all waitlist entries
 export async function GET(request: NextRequest) {
@@ -11,10 +12,11 @@ export async function GET(request: NextRequest) {
     const rows = await query<{
       id: string;
       product_id: string;
-      telegram_username: string;
+      telegram_username: string | null;
       email: string | null;
       notified: boolean;
       notified_at: string | null;
+      notified_via: string | null;
       created_at: string;
     }>(
       `SELECT
@@ -24,6 +26,7 @@ export async function GET(request: NextRequest) {
         w.email,
         w.notified,
         w.notified_at,
+        w.notified_via,
         w.created_at
        FROM waitlist w
        ORDER BY w.notified ASC, w.created_at DESC`,
@@ -46,63 +49,33 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: Mark waitlist entries as notified
+// POST: Send restock notifications (email + Telegram channel) to pending users
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuth(request);
-    const { ids, productId } = await request.json();
+    await requireAuth(request);
+    const { productId } = await request.json();
 
-    if (!ids && !productId) {
+    if (!productId) {
       return NextResponse.json(
-        { success: false, error: "Either ids array or productId required" },
+        { success: false, error: "productId required" },
         { status: 400 }
       );
     }
 
-    let result: any[] = [];
-
-    if (ids && Array.isArray(ids)) {
-      // Mark specific IDs as notified
-      result = await query(
-        `UPDATE waitlist
-         SET notified = true, notified_at = NOW()
-         WHERE id = ANY($1::text[])
-         RETURNING id`,
-        [ids]
-      );
-    } else if (productId) {
-      // Mark all pending for a product as notified
-      result = await query(
-        `UPDATE waitlist
-         SET notified = true, notified_at = NOW()
-         WHERE product_id = $1 AND notified = false
-         RETURNING id`,
-        [productId]
-      );
-    }
-
-    // Log action
-    await query(
-      `INSERT INTO logs (type, message, admin_id, created_at)
-       VALUES ($1, $2, $3, NOW())`,
-      [
-        "delivery",
-        `Waitlist notified: ${result.length} users for product ${productId || (ids ? ids.join(", ") : "unknown")}`,
-        user.adminId,
-      ]
-    );
+    const result = await notifyWaitlist(productId);
 
     return NextResponse.json({
       success: true,
-      message: `${result.length} users marked as notified`,
-      data: { count: result.length },
+      message:
+        `${result.pending} notified — ${result.emailed} emailed, Telegram ${result.telegram}`,
+      data: { count: result.pending, ...result },
     });
   } catch (error) {
     console.error("Waitlist notification error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: getErrorMessage(error) || "Failed to mark as notified",
+        error: getErrorMessage(error) || "Failed to send notifications",
       },
       { status: 500 }
     );

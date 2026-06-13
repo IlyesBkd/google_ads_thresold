@@ -4,6 +4,8 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 
 -- ─── Drop existing tables (development only) ────────────────────────────────
+DROP TABLE IF EXISTS waitlist CASCADE;
+DROP TABLE IF EXISTS settings CASCADE;
 DROP TABLE IF EXISTS logs CASCADE;
 DROP TABLE IF EXISTS download_tokens CASCADE;
 DROP TABLE IF EXISTS stock_items CASCADE;
@@ -131,10 +133,11 @@ CREATE INDEX idx_settings_key ON settings(key);
 CREATE TABLE waitlist (
   id                TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   product_id        TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-  telegram_username TEXT NOT NULL,
-  email             TEXT,                                  -- Optional backup contact
+  telegram_username TEXT,                                  -- Optional (channel broadcast doesn't need it)
+  email             TEXT,                                  -- Optional contact for auto-email
   notified          BOOLEAN NOT NULL DEFAULT false,
   notified_at       TIMESTAMPTZ,
+  notified_via      TEXT,                                  -- 'email' | 'channel' | 'email+channel' | 'none'
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
   CONSTRAINT unique_waitlist_user UNIQUE (product_id, telegram_username)

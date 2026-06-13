@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/jwt';
 import { query, execute } from '@/lib/db';
 import { StockItemWithProduct } from '@/lib/types';
 import { checkAndAlertStock } from '@/lib/stock-alerts';
+import { notifyWaitlist } from '@/lib/waitlist-notify';
 
 export async function GET(request: NextRequest) {
   try {
@@ -156,6 +157,12 @@ export async function POST(request: NextRequest) {
 
     // Check stock levels after import (no await - fire and forget)
     checkAndAlertStock(productId).catch((err) => console.error('Stock alert error:', err));
+
+    // Notify the restock waitlist (email + Telegram channel). Each pending entry is
+    // notified at most once, so re-importing won't re-notify already-notified users.
+    if (addedCount > 0) {
+      notifyWaitlist(productId).catch((err) => console.error('Waitlist notify error:', err));
+    }
 
     return NextResponse.json({
       success: true,

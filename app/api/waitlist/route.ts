@@ -5,7 +5,15 @@ import { waitlistSchema } from "@/lib/validation";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const parsed = waitlistSchema.safeParse(body);
+
+    // Normalise empty strings to undefined so "email only" or "telegram only" both pass
+    const normalized = {
+      productId: body.productId,
+      telegramUsername: body.telegramUsername?.trim() || undefined,
+      email: body.email?.trim() || undefined,
+    };
+
+    const parsed = waitlistSchema.safeParse(normalized);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -16,9 +24,12 @@ export async function POST(request: NextRequest) {
 
     const { productId, telegramUsername, email } = parsed.data;
 
-    const cleanUsername = telegramUsername.startsWith("@")
-      ? telegramUsername
-      : `@${telegramUsername}`;
+    const cleanUsername = telegramUsername
+      ? telegramUsername.startsWith("@")
+        ? telegramUsername
+        : `@${telegramUsername}`
+      : null;
+    const cleanEmail = email ? email.toLowerCase() : null;
 
     // Check if product exists
     const productCheck = await query(
@@ -33,18 +44,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Insert into waitlist (ON CONFLICT update created_at to refresh)
-    await query(
-      `INSERT INTO waitlist (product_id, telegram_username, email, created_at)
-       VALUES ($1, $2, $3, NOW())
-       ON CONFLICT (product_id, telegram_username)
-       DO UPDATE SET created_at = NOW(), notified = false`,
-      [productId, cleanUsername, email || null]
+    // De-dupe: find an existing entry for this product matching telegram OR email
+    const existing = await query<{ id: string }>(
+      `SELECT id FROM waitlist
+       WHERE product_id = $1
+         AND (
+           ($2::text IS NOT NULL AND telegram_username = $2)
+           OR ($3::text IS NOT NULL AND email = $3)
+         )
+       LIMIT 1`,
+      [productId, cleanUsername, cleanEmail]
     );
+
+    if (existing.length > 0) {
+      // Refresh the entry, fill in any newly-provided contact, reset notified
+      await query(
+        `UPDATE waitlist
+         SET telegram_username = COALESCE($2, telegram_username),
+             email = COALESCE($3, email),
+             notified = false,
+             notified_via = NULL,
+             created_at = NOW()
+         WHERE id = $1`,
+        [existing[0].id, cleanUsername, cleanEmail]
+      );
+    } else {
+      await query(
+        `INSERT INTO waitlist (product_id, telegram_username, email, created_at)
+         VALUES ($1, $2, $3, NOW())`,
+        [productId, cleanUsername, cleanEmail]
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      message: "You'll be notified on Telegram when stock is available",
+      message: "You're on the list — we'll notify you when it's back in stock",
     });
   } catch (error) {
     console.error("Waitlist registration error:", error);

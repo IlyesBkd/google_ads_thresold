@@ -1,33 +1,51 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, type CSSProperties } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { PayMethod, Product } from "@/lib/data";
 import { QRCodeSVG } from "qrcode.react";
 
-function pillStyle(active: boolean): CSSProperties {
-  const base: CSSProperties = {
-    flex: 1,
-    padding: "10px",
-    borderRadius: "9px",
-    fontSize: "13px",
-    cursor: "pointer",
-    fontFamily: "inherit",
-    fontWeight: 500,
-    transition: "all .15s",
-  };
-  return active
-    ? {
-        ...base,
-        background: "rgba(66,133,244,0.16)",
-        border: "1px solid #4285F4",
-        color: "#fff",
-      }
-    : {
-        ...base,
-        background: "#101010",
-        border: "1px solid rgba(255,255,255,0.1)",
-        color: "#9A9A9A",
-      };
+const COIN_INFO: Record<PayMethod, { name: string; color: string }> = {
+  BTC: { name: "Bitcoin", color: "#F7931A" },
+  ETH: { name: "Ethereum", color: "#627EEA" },
+  USDT: { name: "Tether", color: "#26A17B" },
+};
+
+function CryptoIcon({ method, size = 28 }: { method: PayMethod; size?: number }) {
+  if (method === "BTC") {
+    return (
+      <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="16" cy="16" r="16" fill="#F7931A" />
+        <path
+          fill="#fff"
+          d="M23.189 14.02c.314-2.096-1.283-3.223-3.465-3.975l.708-2.84-1.728-.43-.69 2.765c-.454-.114-.92-.22-1.385-.326l.695-2.783L15.596 6l-.708 2.839c-.376-.086-.746-.17-1.104-.26l.002-.009-2.384-.595-.46 1.846s1.283.294 1.256.312c.7.175.826.638.805 1.006l-.806 3.235c.048.012.11.03.18.057l-.183-.045-1.13 4.532c-.086.212-.303.531-.793.41.018.025-1.256-.313-1.256-.313l-.858 1.978 2.25.561c.418.105.828.215 1.231.318l-.715 2.872 1.727.43.708-2.84c.472.127.93.245 1.378.357l-.706 2.828 1.728.43.715-2.866c2.948.558 5.164.333 6.097-2.333.752-2.146-.037-3.385-1.588-4.192 1.13-.26 1.98-1.003 2.207-2.538zm-3.95 5.538c-.533 2.147-4.148.986-5.32.695l.95-3.805c1.172.293 4.929.872 4.37 3.11zm.535-5.569c-.487 1.953-3.495.96-4.47.717l.86-3.45c.975.243 4.118.696 3.61 2.733z"
+        />
+      </svg>
+    );
+  }
+  if (method === "ETH") {
+    return (
+      <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="16" cy="16" r="16" fill="#627EEA" />
+        <g fill="#fff" fillRule="nonzero">
+          <path fillOpacity=".602" d="M16.498 4v8.87l7.497 3.35z" />
+          <path d="M16.498 4L9 16.22l7.498-3.35z" />
+          <path fillOpacity=".602" d="M16.498 21.968v6.027L24 17.616z" />
+          <path d="M16.498 27.995v-6.028L9 17.616z" />
+          <path fillOpacity=".2" d="M16.498 20.573l7.497-4.353-7.497-3.348z" />
+          <path fillOpacity=".602" d="M9 16.22l7.498 4.353v-7.701z" />
+        </g>
+      </svg>
+    );
+  }
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+      <circle cx="16" cy="16" r="16" fill="#26A17B" />
+      <path
+        fill="#fff"
+        d="M17.922 17.383v-.002c-.11.008-.677.042-1.942.042-1.01 0-1.721-.03-1.971-.042v.003c-3.888-.171-6.79-.848-6.79-1.658 0-.809 2.902-1.486 6.79-1.66v2.644c.254.018.982.061 1.988.061 1.207 0 1.812-.05 1.925-.06v-2.643c3.88.173 6.775.85 6.775 1.658 0 .81-2.895 1.485-6.775 1.657m0-3.59v-2.366h5.414V7.819H8.595v3.608h5.414v2.365c-4.4.202-7.709 1.074-7.709 2.118 0 1.044 3.309 1.915 7.709 2.118v7.582h3.913v-7.584c4.393-.202 7.694-1.073 7.694-2.116 0-1.043-3.301-1.914-7.694-2.117"
+      />
+    </svg>
+  );
 }
 
 function Skeleton({ width, height }: { width: string; height: string }) {
@@ -61,11 +79,7 @@ function Spinner() {
   );
 }
 
-const PILLS: { method: PayMethod; label: string }[] = [
-  { method: "BTC", label: "₿ BTC" },
-  { method: "ETH", label: "Ξ ETH" },
-  { method: "USDT", label: "₮ USDT" },
-];
+const PAY_METHODS: PayMethod[] = ["BTC", "ETH", "USDT"];
 
 export default function CheckoutModal({
   checkout,
@@ -98,6 +112,7 @@ export default function CheckoutModal({
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [cryptoRates, setCryptoRates] = useState<Record<string, number> | null>(null);
   const [ratesLoading, setRatesLoading] = useState(false);
+  const [downloadToken, setDownloadToken] = useState<string | null>(null);
 
   // Focus trap refs
   const modalRef = useRef<HTMLDivElement>(null);
@@ -214,9 +229,13 @@ export default function CheckoutModal({
         const data = await response.json();
         if (data.success) {
           const order = data.data.orders.find(
-            (o: { id: string; status: string }) => o.id === paymentData.orderId
+            (o: { id: string; status: string; downloadAvailable?: boolean; downloadToken?: string | null }) =>
+              o.id === paymentData.orderId
           );
           if (order && (order.status === "delivered" || order.status === "paid")) {
+            if (order.downloadAvailable && order.downloadToken) {
+              setDownloadToken(order.downloadToken);
+            }
             setStep("confirmed");
             clearInterval(pollInterval);
           }
@@ -228,6 +247,37 @@ export default function CheckoutModal({
 
     return () => clearInterval(pollInterval);
   }, [step, paymentData, email]);
+
+  // On the confirmation screen, keep fetching the download token until it's ready
+  // (delivery creates the token a moment after the order is marked paid).
+  useEffect(() => {
+    if (step !== "confirmed" || !paymentData || downloadToken) return;
+
+    let attempts = 0;
+    const tokenInterval = setInterval(async () => {
+      attempts++;
+      try {
+        const response = await fetch(`/api/orders/by-email?email=${encodeURIComponent(email)}`);
+        const data = await response.json();
+        if (data.success) {
+          const order = data.data.orders.find(
+            (o: { id: string; downloadAvailable?: boolean; downloadToken?: string | null }) =>
+              o.id === paymentData.orderId
+          );
+          if (order?.downloadAvailable && order.downloadToken) {
+            setDownloadToken(order.downloadToken);
+            clearInterval(tokenInterval);
+          }
+        }
+      } catch {
+        // Silent retry
+      }
+      // Give up after ~1 minute; the emailed link / account page remain available.
+      if (attempts >= 12) clearInterval(tokenInterval);
+    }, 5000);
+
+    return () => clearInterval(tokenInterval);
+  }, [step, paymentData, email, downloadToken]);
 
   const handleEmailSubmit = async () => {
     if (!email || !email.includes("@")) {
@@ -313,8 +363,11 @@ export default function CheckoutModal({
   const totalPrice = basePrice * quantity;
 
   const handleWaitlistSubmit = async () => {
-    if (!telegramUsername) {
-      setError("Please enter your Telegram username");
+    const hasEmail = Boolean(email && email.includes("@"));
+    const hasTelegram = telegramUsername.trim().length >= 2;
+
+    if (!hasEmail && !hasTelegram) {
+      setError("Enter your email or a Telegram username");
       return;
     }
 
@@ -327,8 +380,8 @@ export default function CheckoutModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           productId: checkout.id,
-          telegramUsername,
-          email: email || null,
+          telegramUsername: telegramUsername.trim() || undefined,
+          email: hasEmail ? email : undefined,
         }),
       });
 
@@ -559,21 +612,47 @@ export default function CheckoutModal({
             </div>
 
             <div style={{ marginTop: "20px" }}>
-              <label style={{ display: "block", fontSize: "13px", color: "#9A9A9A", marginBottom: "8px" }}>Choose payment method</label>
-              <div style={{ display: "flex", gap: "8px" }}>
-                {PILLS.map(({ method, label }) => (
-                  <button key={method} onClick={() => setPayMethod(method)} style={pillStyle(payMethod === method)}>
-                    {label}
-                  </button>
-                ))}
+              <label style={{ display: "block", fontSize: "13px", color: "#9A9A9A", marginBottom: "10px" }}>Pay with</label>
+              <div style={{ display: "flex", gap: "10px" }}>
+                {PAY_METHODS.map((method) => {
+                  const info = COIN_INFO[method];
+                  const active = payMethod === method;
+                  const estimate = cryptoRates?.[method] ? totalPrice / cryptoRates[method] : null;
+                  return (
+                    <button
+                      key={method}
+                      onClick={() => setPayMethod(method)}
+                      aria-pressed={active}
+                      style={{
+                        flex: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "7px",
+                        padding: "14px 8px 12px",
+                        borderRadius: "13px",
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        transition: "all .15s",
+                        background: active ? `${info.color}1A` : "#101010",
+                        border: active ? `1.5px solid ${info.color}` : "1.5px solid rgba(255,255,255,0.08)",
+                        boxShadow: active ? `0 0 0 4px ${info.color}14` : "none",
+                      }}
+                    >
+                      <CryptoIcon method={method} size={30} />
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1px" }}>
+                        <span style={{ fontSize: "13px", fontWeight: 600, color: active ? "#fff" : "#D5D5D5" }}>{method}</span>
+                        <span style={{ fontSize: "10.5px", color: active ? info.color : "#6A6A6A", fontWeight: 500 }}>{info.name}</span>
+                      </div>
+                      {estimate !== null && !ratesLoading && (
+                        <span style={{ fontSize: "10px", color: "#6A6A6A", fontFamily: "var(--font-mono), monospace" }}>
+                          ≈ {method === "USDT" ? estimate.toFixed(2) : estimate.toFixed(method === "BTC" ? 6 : 4)}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-              {cryptoRates && !ratesLoading && (
-                <div style={{ marginTop: "10px", fontSize: "12px", color: "#6A6A6A", display: "flex", justifyContent: "center", gap: "16px" }}>
-                  <span>BTC: ${cryptoRates.BTC?.toLocaleString()}</span>
-                  <span>ETH: ${cryptoRates.ETH?.toLocaleString()}</span>
-                  <span>USDT: ${cryptoRates.USDT?.toFixed(2)}</span>
-                </div>
-              )}
               {ratesLoading && (
                 <div style={{ marginTop: "10px", fontSize: "12px", color: "#6A6A6A", textAlign: "center" }}>
                   Loading rates...
@@ -609,35 +688,45 @@ export default function CheckoutModal({
             {/* Waitlist */}
             {availableStock !== null && availableStock <= 3 && !waitlistSuccess && (
               <div style={{ marginTop: "24px", padding: "20px", background: "rgba(251,188,4,0.06)", border: "1px solid rgba(251,188,4,0.18)", borderRadius: "12px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                   <span style={{ fontSize: "20px" }}>🔔</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: "14px", fontWeight: 600, color: "#FBBC04", marginBottom: "4px" }}>
                       {availableStock === 0 ? "Out of stock" : "Low stock!"}
                     </div>
                     <div style={{ fontSize: "12px", color: "#E8D9A8" }}>
-                      Get notified on Telegram when we restock
+                      Get notified the moment we restock — by email and on our Telegram channel.
                     </div>
                   </div>
                 </div>
-                <div style={{ marginTop: "12px" }}>
-                  <label style={{ display: "block", fontSize: "13px", color: "#E8D9A8", marginBottom: "8px" }}>Your Telegram username</label>
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <input
-                      type="text"
-                      value={telegramUsername}
-                      onChange={(e) => setTelegramUsername(e.target.value)}
-                      placeholder="@username"
-                      style={{ flex: 1, padding: "10px 12px", background: "#080808", border: "1px solid rgba(251,188,4,0.3)", borderRadius: "8px", color: "#F5F5F5", fontSize: "13px", fontFamily: "inherit", outline: "none" }}
-                    />
-                    <button
-                      onClick={handleWaitlistSubmit}
-                      disabled={waitlistLoading || !telegramUsername}
-                      style={{ padding: "10px 20px", background: waitlistLoading || !telegramUsername ? "#5a4a1a" : "#FBBC04", color: waitlistLoading || !telegramUsername ? "#9A9A9A" : "#000", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: waitlistLoading || !telegramUsername ? "not-allowed" : "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
-                    >
-                      {waitlistLoading ? "..." : "Notify me"}
-                    </button>
-                  </div>
+
+                <label style={{ display: "block", fontSize: "13px", color: "#E8D9A8", marginBottom: "6px" }}>Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  style={{ width: "100%", padding: "10px 12px", background: "#080808", border: "1px solid rgba(251,188,4,0.3)", borderRadius: "8px", color: "#F5F5F5", fontSize: "13px", fontFamily: "inherit", outline: "none", marginBottom: "12px" }}
+                />
+
+                <label style={{ display: "block", fontSize: "13px", color: "#E8D9A8", marginBottom: "6px" }}>
+                  Telegram username <span style={{ color: "#9A8A5A" }}>(optional)</span>
+                </label>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <input
+                    type="text"
+                    value={telegramUsername}
+                    onChange={(e) => setTelegramUsername(e.target.value)}
+                    placeholder="@username"
+                    style={{ flex: 1, padding: "10px 12px", background: "#080808", border: "1px solid rgba(251,188,4,0.3)", borderRadius: "8px", color: "#F5F5F5", fontSize: "13px", fontFamily: "inherit", outline: "none" }}
+                  />
+                  <button
+                    onClick={handleWaitlistSubmit}
+                    disabled={waitlistLoading || (!(email && email.includes("@")) && telegramUsername.trim().length < 2)}
+                    style={{ padding: "10px 20px", background: waitlistLoading || (!(email && email.includes("@")) && telegramUsername.trim().length < 2) ? "#5a4a1a" : "#FBBC04", color: waitlistLoading || (!(email && email.includes("@")) && telegramUsername.trim().length < 2) ? "#9A9A9A" : "#000", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: waitlistLoading || (!(email && email.includes("@")) && telegramUsername.trim().length < 2) ? "not-allowed" : "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
+                  >
+                    {waitlistLoading ? "..." : "Notify me"}
+                  </button>
                 </div>
               </div>
             )}
@@ -646,7 +735,7 @@ export default function CheckoutModal({
               <div style={{ marginTop: "24px", padding: "16px", background: "rgba(52,168,83,0.1)", border: "1px solid rgba(52,168,83,0.25)", borderRadius: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
                 <span style={{ fontSize: "18px" }}>✅</span>
                 <div style={{ fontSize: "13px", color: "#5BD17E" }}>
-                  You're on the list! We'll message you on Telegram when we restock.
+                  You're on the list! We'll notify you the moment this is back in stock.
                 </div>
               </div>
             )}
@@ -656,50 +745,97 @@ export default function CheckoutModal({
         {/* Step 2: Payment Details */}
         {step === "payment" && paymentData && (
           <>
-            <div style={{ marginTop: "20px", padding: "14px", background: "rgba(251,188,4,0.06)", border: "1px solid rgba(251,188,4,0.18)", borderRadius: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "18px" }}>⏱️</span>
-              <div style={{ flex: 1, fontSize: "12.5px", color: "#E8D9A8" }}>
+            {/* Coin + timer header */}
+            <div style={{ marginTop: "18px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <CryptoIcon method={payMethod} size={34} />
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  <span style={{ fontSize: "14px", fontWeight: 600, color: "#F5F5F5" }}>Pay with {COIN_INFO[payMethod].name}</span>
+                  <span style={{ fontSize: "11.5px", color: "#6A6A6A" }}>Send the exact amount below</span>
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "7px 11px",
+                  borderRadius: "9px",
+                  background: timeLeft !== null && timeLeft > 0 ? "rgba(251,188,4,0.1)" : "rgba(234,67,53,0.1)",
+                  border: `1px solid ${timeLeft !== null && timeLeft > 0 ? "rgba(251,188,4,0.22)" : "rgba(234,67,53,0.25)"}`,
+                  fontFamily: "var(--font-mono), monospace",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: timeLeft !== null && timeLeft > 0 ? "#FBBC04" : "#EA4335",
+                  whiteSpace: "nowrap",
+                }}
+              >
                 {timeLeft !== null && timeLeft > 0 ? (
-                  <>Time remaining: <strong style={{ color: "#FBBC04" }}>{formatTime(timeLeft)}</strong></>
+                  <>
+                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#FBBC04", display: "inline-block" }} />
+                    {formatTime(timeLeft)}
+                  </>
                 ) : (
-                  <strong style={{ color: "#EA4335" }}>Payment expired</strong>
+                  "Expired"
                 )}
               </div>
             </div>
 
-            <div style={{ marginTop: "18px", fontSize: "13px", color: "#9A9A9A" }}>
-              Send exactly {paymentData.payAmount.toFixed(8)} {payMethod}
-            </div>
-
-            <div style={{ marginTop: "16px", textAlign: "center", padding: "20px", background: "#080808", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)" }}>
-              <div style={{ fontSize: "12px", color: "#9A9A9A", marginBottom: "12px", fontFamily: "var(--font-mono), monospace", letterSpacing: "0.5px" }}>
-                SCAN WITH MOBILE WALLET
+            {/* Amount to send */}
+            <div style={{ marginTop: "16px", padding: "16px", background: `${COIN_INFO[payMethod].color}0D`, border: `1px solid ${COIN_INFO[payMethod].color}33`, borderRadius: "13px" }}>
+              <div style={{ fontSize: "11px", color: "#9A9A9A", letterSpacing: "0.04em", marginBottom: "8px", textTransform: "uppercase" }}>Amount to send</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                <span style={{ fontFamily: "var(--font-mono), monospace", fontSize: "20px", fontWeight: 600, color: "#fff", wordBreak: "break-all", lineHeight: 1.2 }}>
+                  {paymentData.payAmount.toFixed(8)} <span style={{ fontSize: "14px", color: COIN_INFO[payMethod].color }}>{payMethod}</span>
+                </span>
+                <button
+                  onClick={() => {
+                    try { navigator.clipboard?.writeText(paymentData.payAmount.toFixed(8)); } catch {}
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1600);
+                  }}
+                  aria-label="Copy amount"
+                  style={{ flexShrink: 0, padding: "8px 12px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "8px", color: "#F5F5F5", fontSize: "12px", cursor: "pointer", fontFamily: "inherit" }}
+                >
+                  Copy
+                </button>
               </div>
-              <div style={{ display: "inline-block", padding: "12px", background: "#FFFFFF", borderRadius: "8px" }}>
-                <QRCodeSVG value={paymentData.payAddress} size={180} level="M" includeMargin={false} />
+            </div>
+
+            {/* QR code */}
+            <div style={{ marginTop: "12px", textAlign: "center", padding: "18px", background: "#080808", borderRadius: "13px", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div style={{ display: "inline-block", padding: "12px", background: "#FFFFFF", borderRadius: "10px", lineHeight: 0 }}>
+                <QRCodeSVG value={paymentData.payAddress} size={172} level="M" includeMargin={false} />
+              </div>
+              <div style={{ fontSize: "11px", color: "#6A6A6A", marginTop: "11px", letterSpacing: "0.03em" }}>
+                Scan with your mobile wallet
               </div>
             </div>
 
-            <div style={{ marginTop: "12px", display: "flex", alignItems: "center", gap: "10px", padding: "13px 14px", background: "#080808", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px" }}>
-              <code style={{ fontFamily: "var(--font-mono), monospace", fontSize: "12px", color: "#C5C5C5", wordBreak: "break-all", flex: 1, lineHeight: 1.5 }}>
-                {paymentData.payAddress}
-              </code>
-              <button onClick={handleCopy} style={{ flexShrink: 0, padding: "8px 12px", background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "8px", color: "#F5F5F5", fontSize: "12px", cursor: "pointer", fontFamily: "inherit" }}>
-                {copied ? "Copied" : "Copy"}
-              </button>
+            {/* Address */}
+            <div style={{ marginTop: "12px" }}>
+              <div style={{ fontSize: "11px", color: "#9A9A9A", letterSpacing: "0.04em", marginBottom: "7px", textTransform: "uppercase" }}>{COIN_INFO[payMethod].name} address</div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "13px 14px", background: "#080808", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px" }}>
+                <code style={{ fontFamily: "var(--font-mono), monospace", fontSize: "12px", color: "#C5C5C5", wordBreak: "break-all", flex: 1, lineHeight: 1.5 }}>
+                  {paymentData.payAddress}
+                </code>
+                <button onClick={handleCopy} style={{ flexShrink: 0, padding: "8px 12px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "8px", color: "#F5F5F5", fontSize: "12px", cursor: "pointer", fontFamily: "inherit" }}>
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
             </div>
 
-            <div style={{ marginTop: "16px", padding: "12px", background: "rgba(66,133,244,0.06)", border: "1px solid rgba(66,133,244,0.16)", borderRadius: "10px" }}>
-              <div style={{ fontSize: "11px", fontFamily: "var(--font-mono), monospace", color: "#4285F4", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Order ID</div>
-              <div style={{ fontSize: "14px", fontFamily: "var(--font-mono), monospace", color: "#F5F5F5" }}>{paymentData.orderId}</div>
+            <div style={{ marginTop: "14px", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 13px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "10px" }}>
+              <span style={{ fontSize: "11px", color: "#6A6A6A", letterSpacing: "0.04em", textTransform: "uppercase" }}>Order ID</span>
+              <span style={{ fontSize: "12.5px", fontFamily: "var(--font-mono), monospace", color: "#9A9A9A" }}>{paymentData.orderId}</span>
             </div>
 
-            <p style={{ margin: "16px 0 0", fontSize: "12.5px", lineHeight: 1.6, color: "#6A6A6A" }}>
-              After sending, you'll receive an email with download link within minutes. Check your spam folder if needed.
+            <p style={{ margin: "14px 0 0", fontSize: "12px", lineHeight: 1.6, color: "#6A6A6A", textAlign: "center" }}>
+              Credentials are emailed automatically within minutes of confirmation. Check spam if needed.
             </p>
 
             {paymentData.mockMode && (
-              <div style={{ marginTop: "16px", padding: "12px", background: "rgba(251,188,4,0.08)", border: "1px solid rgba(251,188,4,0.2)", borderRadius: "10px", fontSize: "12px", color: "#FBBC04" }}>
+              <div style={{ marginTop: "14px", padding: "12px", background: "rgba(251,188,4,0.08)", border: "1px solid rgba(251,188,4,0.2)", borderRadius: "10px", fontSize: "12px", color: "#FBBC04" }}>
                 🎭 <strong>MOCK MODE:</strong> Payment will be auto-confirmed in 10 seconds (dev testing)
               </div>
             )}
@@ -733,7 +869,13 @@ export default function CheckoutModal({
         {step === "confirmed" && paymentData && (
           <>
             <div style={{ textAlign: "center", padding: "32px 0" }}>
-              <div style={{ fontSize: "56px", marginBottom: "16px" }}>✅</div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: "18px" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "64px", height: "64px", borderRadius: "50%", background: "rgba(52,168,83,0.12)", border: "1px solid rgba(52,168,83,0.3)" }}>
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#34A853" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                </span>
+              </div>
               <div style={{ fontSize: "20px", fontWeight: 600, color: "#FAFAFA", marginBottom: "8px" }}>
                 Payment confirmed!
               </div>
@@ -743,13 +885,45 @@ export default function CheckoutModal({
               </div>
             </div>
 
+            {/* Direct download (.txt) */}
+            {downloadToken ? (
+              <a
+                href={`/download/${downloadToken}`}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  width: "100%",
+                  padding: "14px",
+                  background: "#34A853",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "11px",
+                  fontSize: "15px",
+                  fontWeight: 600,
+                  textAlign: "center",
+                  textDecoration: "none",
+                  cursor: "pointer",
+                  marginBottom: "16px",
+                }}
+              >
+                ⬇ Download credentials (.txt)
+              </a>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", width: "100%", padding: "14px", background: "rgba(52,168,83,0.08)", border: "1px solid rgba(52,168,83,0.2)", borderRadius: "11px", marginBottom: "16px", fontSize: "13px", color: "#9A9A9A" }}>
+                <Spinner />
+                Preparing your download…
+              </div>
+            )}
+
             <div style={{ padding: "16px", background: "rgba(52,168,83,0.08)", border: "1px solid rgba(52,168,83,0.2)", borderRadius: "12px", marginBottom: "16px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
                 <span style={{ fontSize: "16px" }}>📧</span>
-                <span style={{ fontSize: "14px", color: "#5BD17E", fontWeight: 500 }}>Check your inbox</span>
+                <span style={{ fontSize: "14px", color: "#5BD17E", fontWeight: 500 }}>Also sent to your inbox</span>
               </div>
               <div style={{ fontSize: "13px", color: "#9A9A9A", lineHeight: 1.5 }}>
-                Download link sent to your email. If you don't see it within 2 minutes, check your spam folder.
+                A download link was emailed to you as a backup. If you don't see it within 2 minutes, check your spam folder.
               </div>
             </div>
 

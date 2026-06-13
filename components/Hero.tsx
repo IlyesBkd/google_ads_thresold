@@ -1,4 +1,4 @@
-import BarsMark from "./BarsMark";
+import Image from "next/image";
 
 const trustItems = ["Threshold unlocked", "Instant delivery", "€400 promo eligible"];
 
@@ -44,7 +44,7 @@ export default function Hero() {
             color: "#B5B5B5",
           }}
         >
-          <BarsMark variant="badge" />
+          <Image src="/google-ads.png" alt="Google Ads" width={16} height={16} />
           <span>Running on Google Ads</span>
           <span style={{ display: "inline-flex", gap: "4px", marginLeft: "2px" }}>
             {["#4285F4", "#EA4335", "#FBBC04", "#34A853"].map((c) => (

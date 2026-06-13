@@ -13,11 +13,16 @@ export default function Navbar({ showNavLinks }: { showNavLinks: boolean }) {
         borderBottom: "1px solid rgba(255,255,255,0.07)",
       }}
     >
+      <style>{`
+        @media (max-width: 640px) {
+          .nav-links { display: none !important; }
+        }
+      `}</style>
       <nav
         style={{
           maxWidth: "1120px",
           margin: "0 auto",
-          padding: "15px 24px",
+          padding: "14px 24px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -29,17 +34,18 @@ export default function Navbar({ showNavLinks }: { showNavLinks: boolean }) {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "11px",
+            gap: "9px",
             textDecoration: "none",
+            flexShrink: 0,
           }}
         >
           <BarsMark variant="nav" />
           <span
             style={{
-              fontSize: "16px",
-              fontWeight: 600,
-              letterSpacing: "-0.02em",
+              fontSize: "15px",
+              fontWeight: 700,
               color: "#F5F5F5",
+              letterSpacing: "0.04em",
             }}
           >
             GADSCALE
@@ -48,6 +54,7 @@ export default function Navbar({ showNavLinks }: { showNavLinks: boolean }) {
 
         {showNavLinks && (
           <div
+            className="nav-links"
             style={{
               display: "flex",
               alignItems: "center",
@@ -89,6 +96,7 @@ export default function Navbar({ showNavLinks }: { showNavLinks: boolean }) {
             fontSize: "13.5px",
             fontWeight: 500,
             textDecoration: "none",
+            flexShrink: 0,
           }}
         >
           My Orders

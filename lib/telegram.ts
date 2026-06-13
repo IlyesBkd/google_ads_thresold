@@ -1,91 +1,73 @@
-import { getErrorMessage } from './errors';
 /**
- * Telegram notification helper
- * Sends messages to users via Telegram Bot API
+ * Telegram channel broadcast helper.
+ *
+ * Posts messages to a Telegram channel/group via a bot.
+ * Configuration is read from the `settings` table (editable in the admin panel),
+ * falling back to env vars TELEGRAM_BOT_TOKEN / TELEGRAM_CHANNEL_ID:
+ *   - bot token: token from @BotFather
+ *   - channel id: channel @username (public) or numeric -100... id (private).
+ *                 The bot must be an admin of that channel.
  */
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+import { query } from './db';
+import { getErrorMessage } from './errors';
 
-export interface TelegramNotification {
-  username: string;
-  message: string;
+async function getTelegramConfig(): Promise<{ token: string | null; channelId: string | null }> {
+  let token = process.env.TELEGRAM_BOT_TOKEN || null;
+  let channelId = process.env.TELEGRAM_CHANNEL_ID || null;
+
+  try {
+    const rows = await query<{ key: string; value: string }>(
+      `SELECT key, value FROM settings
+       WHERE key IN ('telegram_bot_token', 'telegram_channel_id')`,
+      []
+    );
+    for (const row of rows) {
+      if (row.key === 'telegram_bot_token' && row.value) token = row.value;
+      if (row.key === 'telegram_channel_id' && row.value) channelId = row.value;
+    }
+  } catch (error) {
+    console.error('Failed to read Telegram settings:', error);
+  }
+
+  return { token, channelId };
 }
 
-/**
- * Send a message to a Telegram user
- * Note: Requires TELEGRAM_BOT_TOKEN in .env
- * User must have started a conversation with the bot first
- */
-export async function sendTelegramMessage(
-  username: string,
-  message: string
-): Promise<{ success: boolean; error?: string }> {
-  if (!TELEGRAM_BOT_TOKEN) {
-    console.warn("TELEGRAM_BOT_TOKEN not configured, skipping notification");
-    return { success: false, error: "Bot token not configured" };
+export async function isTelegramConfigured(): Promise<boolean> {
+  const { token, channelId } = await getTelegramConfig();
+  return Boolean(token && channelId);
+}
+
+export async function sendTelegramChannelMessage(
+  text: string
+): Promise<{ success: boolean; skipped?: boolean; error?: string }> {
+  const { token, channelId } = await getTelegramConfig();
+
+  if (!token || !channelId) {
+    return { success: false, skipped: true, error: 'Telegram bot not configured' };
   }
 
   try {
-    // Note: Telegram Bot API requires chat_id, not username
-    // To send to username, you need to:
-    // 1. Have the user start a conversation with your bot first
-    // 2. Store their chat_id when they send /start
-    // 3. Use chat_id instead of username
+    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: channelId,
+        text,
+        parse_mode: 'HTML',
+        disable_web_page_preview: false,
+      }),
+    });
 
-    // For now, this is a placeholder that logs the message
-    // In production, you'd implement proper chat_id storage
-    console.log(`📱 Telegram notification to ${username}:`, message);
-
-    // TODO: Implement actual Telegram API call
-    // const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify({
-    //     chat_id: chatId, // Need to resolve username to chat_id
-    //     text: message,
-    //     parse_mode: "Markdown",
-    //   }),
-    // });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Telegram API error:', response.status, errorText);
+      return { success: false, error: `Telegram API error: ${response.status}` };
+    }
 
     return { success: true };
   } catch (error) {
-    console.error("Telegram notification error:", error);
+    console.error('Telegram send error:', error);
     return { success: false, error: getErrorMessage(error) };
   }
-}
-
-/**
- * Notify waitlist users about stock availability
- */
-export async function notifyWaitlist(
-  productId: string,
-  productName: string,
-  users: Array<{ telegram_username: string; email?: string | null }>
-): Promise<{ sent: number; failed: number }> {
-  let sent = 0;
-  let failed = 0;
-
-  const message = `
-🎉 *Stock Alert!*
-
-The *${productName}* is back in stock!
-
-Click here to buy now:
-${process.env.NEXT_PUBLIC_SITE_URL || "https://your-site.com"}
-
-⚡️ Limited quantity available — grab yours before they're gone!
-`.trim();
-
-  for (const user of users) {
-    const result = await sendTelegramMessage(user.telegram_username, message);
-    if (result.success) {
-      sent++;
-    } else {
-      failed++;
-    }
-  }
-
-  console.log(`📊 Waitlist notification complete: ${sent} sent, ${failed} failed`);
-
-  return { sent, failed };
 }

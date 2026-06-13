@@ -69,7 +69,6 @@ export default function Sidebar({ currentPage, onNavigate, adminEmail, sidebarOp
     <aside style={sidebarStyle} id="admin-sidebar" data-open={sidebarOpen}>
       <div style={{ padding: "24px 20px 20px", display: "flex", alignItems: "center", gap: 10 }}>
         <BarsMark size={28} />
-        <span style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, letterSpacing: 1.2 }}>THRESHOLDS</span>
         <span style={{
           fontSize: 10,
           fontWeight: 600,

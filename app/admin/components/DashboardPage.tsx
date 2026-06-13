@@ -32,15 +32,14 @@ export default function DashboardPage({
   }
 
   const statCards = [
-    { label: "Revenue today", value: `$${(stats.revenueToday / 100).toFixed(0)}`, delta: "+12%", deltaColor: COLORS.green },
-    { label: "Revenue this week", value: `$${(stats.revenueWeek / 100).toLocaleString()}`, delta: "+8%", deltaColor: COLORS.green },
-    { label: "Revenue this month", value: `$${(stats.revenueMonth / 100).toLocaleString()}`, delta: "+23%", deltaColor: COLORS.green },
-    { label: "Sales (30d)", value: String(stats.sales30d), delta: "+5", deltaColor: COLORS.green },
+    { label: "Revenue today", value: `$${(stats.revenueToday / 100).toFixed(0)}`, delta: "", deltaColor: COLORS.textSecondary },
+    { label: "Revenue this week", value: `$${(stats.revenueWeek / 100).toLocaleString()}`, delta: "", deltaColor: COLORS.textSecondary },
+    { label: "Revenue this month", value: `$${(stats.revenueMonth / 100).toLocaleString()}`, delta: "", deltaColor: COLORS.textSecondary },
+    { label: "Sales (30d)", value: String(stats.sales30d), delta: "", deltaColor: COLORS.textSecondary },
     { label: "Total stock remaining", value: String(stats.totalStock), delta: "across all products", deltaColor: COLORS.textSecondary },
   ];
 
   const lowStockProducts = products.filter((p) => p.remaining <= p.lowStockAlert);
-  const chartData = [320, 280, 410, 390, 450, 520, 480, 390, 550, 610, 580, 640, 590, 698];
 
   return (
     <div>
@@ -49,7 +48,7 @@ export default function DashboardPage({
           <div key={i} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: "20px 22px" }}>
             <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>{s.label}</div>
             <div style={{ fontSize: 28, fontWeight: 700, color: COLORS.text, fontFamily: "var(--font-mono)", marginBottom: 4 }}>{s.value}</div>
-            <div style={{ fontSize: 12, color: s.deltaColor }}>{s.delta}</div>
+            {s.delta && <div style={{ fontSize: 12, color: s.deltaColor }}>{s.delta}</div>}
           </div>
         ))}
       </div>
@@ -76,15 +75,11 @@ export default function DashboardPage({
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
         <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: "22px" }}>
-          <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 16 }}>Revenue 14d</div>
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 120 }}>
-            {chartData.map((v, i) => {
-              const maxV = Math.max(...chartData);
-              const h = (v / maxV) * 100;
-              return (
-                <div key={i} style={{ flex: 1, height: `${h}%`, background: i === chartData.length - 1 ? COLORS.primary : "rgba(255,255,255,0.08)", borderRadius: 4, minWidth: 0 }} />
-              );
-            })}
+          <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 16 }}>Revenue this month</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 120 }}>
+            <span style={{ fontSize: 32, fontWeight: 700, color: COLORS.text, fontFamily: "var(--font-mono)" }}>
+              ${(stats.revenueMonth / 100).toLocaleString()}
+            </span>
           </div>
         </div>
 
@@ -99,7 +94,7 @@ export default function DashboardPage({
                   <span style={{ fontSize: 13, color: COLORS.textSecondary, fontFamily: "var(--font-mono)" }}>{p.remaining}/{p.totalImported}</span>
                 </div>
                 <div style={{ height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 4 }}>
-                  <div style={{ width: `${pct}%`, height: "100%", background: p.id === "PROD-350" ? COLORS.primary : COLORS.yellow, borderRadius: 4 }} />
+                  <div style={{ width: `${pct}%`, height: "100%", background: pct <= 30 ? COLORS.yellow : COLORS.primary, borderRadius: 4 }} />
                 </div>
               </div>
             );

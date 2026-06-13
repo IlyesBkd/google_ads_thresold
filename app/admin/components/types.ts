@@ -64,10 +64,11 @@ export interface DashboardStats {
 export interface WaitlistEntry {
   id: string;
   product_id: string;
-  telegram_username: string;
+  telegram_username: string | null;
   email: string | null;
   notified: boolean;
   notified_at: string | null;
+  notified_via: string | null;
   created_at: string;
 }
 

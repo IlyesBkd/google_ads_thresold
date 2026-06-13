@@ -73,12 +73,28 @@ export const faqs: Faq[] = [
     q: "What if I can't log in?",
     a: "If you can't log into your account, message us on Telegram and we'll replace it with a fresh one, no questions asked.",
   },
+  {
+    q: "Which cryptocurrencies do you accept?",
+    a: "We accept Bitcoin (BTC), Ethereum (ETH), and USDT (TRC-20). Select your preferred coin at checkout — you'll receive a wallet address and the exact amount to send.",
+  },
+  {
+    q: "Can I buy multiple accounts?",
+    a: "Yes. You can select the quantity at checkout. Each account comes with its own unique credentials. Bulk buyers often use multiple accounts to diversify their ad spend across campaigns.",
+  },
+  {
+    q: "How does the billing threshold work?",
+    a: "Google Ads uses a threshold billing system — instead of charging you upfront, they let you accumulate a certain amount of ad spend before billing your payment method. Our accounts already have this threshold unlocked, so you can start spending immediately.",
+  },
+  {
+    q: "What do I receive exactly?",
+    a: "You receive a .txt file containing the Google Ads account email, password, and recovery details. Everything you need to log in and start running campaigns right away.",
+  },
+  {
+    q: "Do you offer refunds?",
+    a: "Due to the nature of digital goods, we don't offer refunds once credentials are delivered. However, if the account doesn't work on arrival (can't log in), we replace it immediately — just message us on Telegram.",
+  },
+  {
+    q: "How do I contact support?",
+    a: "Message us directly on Telegram at @Selling_GAds. We typically respond within a few minutes during business hours.",
+  },
 ];
-
-
-// Placeholder wallet addresses — replace with real ones before going live.
-export const wallets: Record<PayMethod, string> = {
-  BTC: "bc1q8c6f92ptnvz0e7yd3k4r5s9w2x8m4l0q7h3n6",
-  ETH: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
-  USDT: "0x8E2A9bAcD4d31C7656EC7ab88b098defB751B740",
-};

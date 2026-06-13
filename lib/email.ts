@@ -140,7 +140,7 @@ function getCredentialsEmailHtml({
     <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; margin-bottom: 32px;">
       <div style="font-size: 14px; font-weight: 600; color: #FAFAFA; margin-bottom: 8px;">Need help?</div>
       <div style="font-size: 13px; color: #9A9A9A; line-height: 1.5;">
-        If you have any questions or the download link doesn't work, contact us on Discord or reply to this email with your order ID.
+        If you have any questions or the download link doesn't work, contact us on Telegram (@Selling_GAds) or reply to this email with your order ID.
       </div>
     </div>
 
@@ -193,10 +193,102 @@ WHAT'S INSIDE THE FILE:
 ✓ Setup instructions
 
 NEED HELP?
-If you have any questions or the download link doesn't work, contact us on Discord or reply to this email with your order ID.
+If you have any questions or the download link doesn't work, contact us on Telegram (@Selling_GAds) or reply to this email with your order ID.
 
 ---
 © 2026 GADSCALE · Threshold accounts delivered instantly
 This is an automated email. Do not reply to this address.
+  `;
+}
+
+/**
+ * Send a "back in stock" email to a waitlist subscriber
+ */
+export async function sendRestockEmail(
+  customerEmail: string,
+  productName: string,
+  productUrl: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await getResend().emails.send({
+      from: FROM_EMAIL,
+      to: customerEmail,
+      subject: `${productName} is back in stock — GadScale`,
+      html: getRestockEmailHtml({ productName, productUrl }),
+      text: getRestockEmailText({ productName, productUrl }),
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Restock email send error:', error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+function getRestockEmailHtml({
+  productName,
+  productUrl,
+}: {
+  productName: string;
+  productUrl: string;
+}) {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${productName} is back in stock</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #080808; color: #FAFAFA;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+
+    <div style="text-align: center; margin-bottom: 36px;">
+      <span style="font-size: 20px; font-weight: 600; letter-spacing: -0.02em; color: #F5F5F5;">GADSCALE</span>
+    </div>
+
+    <div style="background: #0C0C0C; border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 32px; margin-bottom: 24px; text-align: center;">
+      <div style="font-size: 40px; margin-bottom: 12px;">🔔</div>
+      <h1 style="margin: 0 0 12px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; color: #FAFAFA;">Back in stock</h1>
+      <p style="margin: 0 0 28px; font-size: 15px; line-height: 1.6; color: #9A9A9A;">
+        Good news — the <strong style="color: #FAFAFA;">${productName}</strong> you were waiting for is available again. Stock is limited and sells fast.
+      </p>
+      <a href="${productUrl}" style="display: inline-block; padding: 14px 28px; background: #4285F4; color: #fff; border-radius: 11px; font-size: 15px; font-weight: 600; text-decoration: none;">
+        Buy now
+      </a>
+    </div>
+
+    <div style="text-align: center; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06);">
+      <p style="margin: 0 0 8px; font-size: 12px; color: #6A6A6A;">
+        You're receiving this because you joined the restock waitlist on GadScale.
+      </p>
+      <p style="margin: 0; font-size: 12px; color: #6A6A6A;">
+        © 2026 GADSCALE · Threshold accounts delivered instantly
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>
+  `;
+}
+
+function getRestockEmailText({
+  productName,
+  productUrl,
+}: {
+  productName: string;
+  productUrl: string;
+}) {
+  return `
+GADSCALE — Back in stock
+
+Good news — the ${productName} you were waiting for is available again.
+Stock is limited and sells fast.
+
+Buy now: ${productUrl}
+
+---
+You're receiving this because you joined the restock waitlist on GadScale.
+© 2026 GADSCALE · Threshold accounts delivered instantly
   `;
 }

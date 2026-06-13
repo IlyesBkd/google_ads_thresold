@@ -3,7 +3,10 @@ import { getErrorMessage } from './errors';
 import crypto from 'crypto';
 
 const NOWPAYMENTS_API_KEY = process.env.CRYPTO_GATEWAY_API_KEY;
-const NOWPAYMENTS_API_URL = 'https://api.nowpayments.io/v1';
+const USE_SANDBOX = process.env.NOWPAYMENTS_SANDBOX === 'true';
+const NOWPAYMENTS_API_URL = USE_SANDBOX
+  ? 'https://api-sandbox.nowpayments.io/v1'
+  : 'https://api.nowpayments.io/v1';
 const USE_MOCK = process.env.NODE_ENV !== 'production' &&
   (!NOWPAYMENTS_API_KEY || NOWPAYMENTS_API_KEY === 'your-crypto-gateway-api-key');
 
@@ -65,6 +68,7 @@ export async function createPayment(
         order_id: params.orderId,
         order_description: params.orderDescription,
         ipn_callback_url: params.ipnCallbackUrl,
+        ...(USE_SANDBOX && { case: 'success' }),
       }),
     });
 

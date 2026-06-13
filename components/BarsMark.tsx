@@ -2,22 +2,24 @@ import Image from "next/image";
 
 type Variant = "nav" | "badge" | "card" | "footer";
 
-const SIZES: Record<Variant, number> = {
-  nav: 22,
-  badge: 14,
-  card: 24,
-  footer: 16,
+const HEIGHTS: Record<Variant, number> = {
+  nav: 32,
+  badge: 20,
+  card: 36,
+  footer: 22,
 };
 
 export default function BarsMark({ variant }: { variant: Variant }) {
-  const size = SIZES[variant];
+  const h = HEIGHTS[variant];
+  const w = Math.round(h * (220 / 250));
   return (
     <Image
       src="/logo.png"
-      alt="GADSCALE"
-      width={size}
-      height={size}
-      style={{ display: "inline-block", verticalAlign: "middle" }}
+      alt="GadScale logo"
+      width={w}
+      height={h}
+      style={{ display: "block", objectFit: "contain" }}
+      priority={variant === "nav"}
     />
   );
 }
