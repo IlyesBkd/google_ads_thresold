@@ -5,7 +5,15 @@ import { getErrorMessage } from './errors';
 
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY);
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (!_resend) {
+    const key = process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY || '';
+    _resend = new Resend(key);
+  }
+  return _resend;
+}
+
 const FROM_EMAIL = process.env.RESEND_FROM || process.env.EMAIL_FROM || 'noreply@gadscale.com';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
@@ -23,7 +31,7 @@ export async function sendCredentialsEmail(
     const downloadUrl = `${APP_URL}/download/${downloadToken}`;
     const expiresIn = Math.round((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60));
 
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM_EMAIL,
       to: customerEmail,
       subject: `Your ${productName} is ready - Order ${orderId}`,
