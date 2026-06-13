@@ -3,9 +3,12 @@
  */
 
 import { SignJWT, jwtVerify } from 'jose';
+import { JWT_EXPIRATION } from './constants';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secure-jwt-secret-key-change-this-in-production';
-const secret = new TextEncoder().encode(JWT_SECRET);
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
+const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export interface JWTPayload {
   adminId: string;
@@ -20,7 +23,7 @@ export async function signToken(payload: JWTPayload): Promise<string> {
   const token = await new SignJWT({ ...payload })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('7d') // Token expires in 7 days
+    .setExpirationTime(JWT_EXPIRATION)
     .sign(secret);
 
   return token;

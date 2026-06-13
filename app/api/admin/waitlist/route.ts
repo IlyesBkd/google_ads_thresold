@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@/lib/errors';
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { requireAuth } from "@/lib/jwt";
@@ -33,12 +34,12 @@ export async function GET(request: NextRequest) {
       success: true,
       data: rows,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Waitlist fetch error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Failed to fetch waitlist",
+        error: getErrorMessage(error) || "Failed to fetch waitlist",
       },
       { status: 500 }
     );
@@ -96,12 +97,12 @@ export async function POST(request: NextRequest) {
       message: `${result.length} users marked as notified`,
       data: { count: result.length },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Waitlist notification error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Failed to mark as notified",
+        error: getErrorMessage(error) || "Failed to mark as notified",
       },
       { status: 500 }
     );
@@ -128,12 +129,12 @@ export async function DELETE(request: NextRequest) {
       success: true,
       message: "Waitlist entry deleted",
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Waitlist delete error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Failed to delete entry",
+        error: getErrorMessage(error) || "Failed to delete entry",
       },
       { status: 500 }
     );

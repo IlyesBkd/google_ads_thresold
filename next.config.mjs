@@ -1,14 +1,21 @@
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Pin the file-tracing root to this project (a stray lockfile exists in a
-  // parent dir, which would otherwise be inferred as the workspace root).
   outputFileTracingRoot: __dirname,
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  silent: true,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+}, {
+  widenClientFileUpload: true,
+  hideSourceMaps: true,
+  disableLogger: true,
+});

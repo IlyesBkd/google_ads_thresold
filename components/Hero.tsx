@@ -1,15 +1,8 @@
 import BarsMark from "./BarsMark";
-import LiveFeed from "./LiveFeed";
 
-const trustItems = ["Instant delivery", "Crypto accepted", "Replacement warranty"];
+const trustItems = ["Threshold unlocked", "Instant delivery", "€400 promo eligible"];
 
-export default function Hero({
-  currentFeed,
-  feedIndex,
-}: {
-  currentFeed: string;
-  feedIndex: number;
-}) {
+export default function Hero() {
   return (
     <section id="top" style={{ position: "relative", overflow: "hidden" }}>
       {/* ambient blue glow */}
@@ -78,27 +71,27 @@ export default function Hero({
             color: "#FAFAFA",
           }}
         >
-          Google Ads accounts.
+          Google Ads threshold
           <br />
-          Threshold{" "}
+          accounts from{" "}
           <span style={{ borderBottom: "3px solid #4285F4", paddingBottom: "3px" }}>
-            unlocked.
+            $50.
           </span>
         </h1>
 
         <p
           style={{
             margin: "14px auto 0",
-            maxWidth: "500px",
+            maxWidth: "540px",
             fontSize: "clamp(14px,1.8vw,16px)",
             lineHeight: 1.6,
             color: "#9A9A9A",
             fontWeight: 400,
           }}
         >
-          Aged, fully verified Google Ads accounts with the billing threshold already
-          unlocked — spend before you pay Google. Delivered instantly as a .txt. Crypto
-          accepted.
+          Ready-to-use Google Ads accounts with the billing threshold already unlocked.
+          Run ads now, pay later. Bonus: all accounts are eligible for Google's €400 free credit promo.
+          Delivered instantly. Crypto accepted.
         </p>
 
         <div
@@ -130,8 +123,6 @@ export default function Hero({
           ))}
         </div>
       </div>
-
-      <LiveFeed currentFeed={currentFeed} feedIndex={feedIndex} />
     </section>
   );
 }

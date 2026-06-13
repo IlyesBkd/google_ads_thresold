@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  products,
+  products as staticProducts,
   faqs,
-  feedData,
   type Product,
 } from "@/lib/data";
 import Navbar from "./Navbar";
@@ -18,7 +17,23 @@ export default function HomePage() {
   const [isMobile, setIsMobile] = useState(false);
   const [openFaq, setOpenFaq] = useState(0);
   const [checkout, setCheckout] = useState<Product | null>(null);
-  const [feedIndex, setFeedIndex] = useState(0);
+  const [products, setProducts] = useState<Product[]>(staticProducts);
+
+  // Fetch products from DB (overrides static data with live prices)
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch("/api/public/products");
+        const data = await response.json();
+        if (data.success && data.data.length > 0) {
+          setProducts(data.data);
+        }
+      } catch {
+        // Keep static fallback
+      }
+    };
+    fetchProducts();
+  }, []);
 
   // responsive: hide nav links under 760px (matches prototype breakpoint)
   useEffect(() => {
@@ -26,15 +41,6 @@ export default function HomePage() {
     onResize();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  // rotating live feed every 3.6s
-  useEffect(() => {
-    const id = setInterval(
-      () => setFeedIndex((i) => (i + 1) % feedData.length),
-      3600
-    );
-    return () => clearInterval(id);
   }, []);
 
   const closeCheckout = useCallback(() => {
@@ -69,7 +75,7 @@ export default function HomePage() {
   return (
     <div style={{ background: "#080808", minHeight: "100vh" }}>
       <Navbar showNavLinks={!isMobile} />
-      <Hero currentFeed={feedData[feedIndex]} feedIndex={feedIndex} />
+      <Hero />
       <Pricing products={products} onBuy={openCheckout} />
       <Faq faqs={faqs} openFaq={openFaq} onToggle={toggleFaq} />
       <Footer />

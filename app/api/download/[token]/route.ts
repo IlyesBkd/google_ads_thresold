@@ -33,11 +33,11 @@ export async function GET(
       status: 200,
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
-        'Content-Disposition': `attachment; filename="adscale-credentials-${result.orderId}.txt"`,
+        'Content-Disposition': `attachment; filename="gadscale-credentials-${result.orderId}.txt"`,
         'Cache-Control': 'no-store, no-cache, must-revalidate',
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Download error:', error);
     return new NextResponse('Internal server error', { status: 500 });
   }
@@ -54,7 +54,7 @@ function generateCredentialsTxt(
   const now = new Date().toISOString();
 
   let content = `╔═══════════════════════════════════════════════════════════════════════╗
-║                          ADSCALE                                      ║
+║                          GADSCALE                                      ║
 ║                  Google Ads Threshold Accounts                        ║
 ╚═══════════════════════════════════════════════════════════════════════╝
 
@@ -107,7 +107,7 @@ IMPORTANT INSTRUCTIONS:
 
 ═══════════════════════════════════════════════════════════════════════
 
-© 2026 ADSCALE - Threshold accounts delivered instantly
+© 2026 GADSCALE - Threshold accounts delivered instantly
 This file was generated automatically. Keep it confidential.
 
 ═══════════════════════════════════════════════════════════════════════

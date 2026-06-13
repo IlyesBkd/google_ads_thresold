@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@/lib/errors';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/jwt';
 import { deliverOrder } from '@/lib/delivery';
@@ -33,12 +34,12 @@ export async function POST(request: NextRequest) {
         downloadToken: result.downloadToken,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Deliver order error:', error);
 
-    if (error.message?.includes('Unauthorized')) {
+    if (getErrorMessage(error)?.includes('Unauthorized')) {
       return NextResponse.json(
-        { success: false, error: error.message },
+        { success: false, error: getErrorMessage(error) },
         { status: 401 }
       );
     }

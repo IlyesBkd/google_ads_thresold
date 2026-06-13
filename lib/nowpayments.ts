@@ -1,12 +1,22 @@
-/**
- * NOWPayments API integration (with mock mode for development)
- */
-
 import { getLiveCryptoRates } from './crypto-rates';
+import { getErrorMessage } from './errors';
+import crypto from 'crypto';
 
 const NOWPAYMENTS_API_KEY = process.env.CRYPTO_GATEWAY_API_KEY;
 const NOWPAYMENTS_API_URL = 'https://api.nowpayments.io/v1';
-const USE_MOCK = !NOWPAYMENTS_API_KEY || NOWPAYMENTS_API_KEY === 'your-crypto-gateway-api-key';
+const USE_MOCK = process.env.NODE_ENV !== 'production' &&
+  (!NOWPAYMENTS_API_KEY || NOWPAYMENTS_API_KEY === 'your-crypto-gateway-api-key');
+
+// NOWPayments uses lowercase currency codes with network suffix
+const CURRENCY_MAP: Record<string, string> = {
+  BTC: 'btc',
+  ETH: 'eth',
+  USDT: 'usdttrc20',
+};
+
+export function mapCurrencyToNowPayments(coin: string): string {
+  return CURRENCY_MAP[coin.toUpperCase()] || coin.toLowerCase();
+}
 
 interface CreatePaymentParams {
   priceAmount: number;
@@ -28,11 +38,10 @@ interface PaymentResponse {
   paymentStatus: string;
   createdAt: string;
   expirationEstimateDate: string;
+  payinExtraId: string | null;
+  network: string;
 }
 
-/**
- * Create a payment invoice
- */
 export async function createPayment(
   params: CreatePaymentParams
 ): Promise<{ success: boolean; data?: PaymentResponse; error?: string }> {
@@ -41,6 +50,8 @@ export async function createPayment(
   }
 
   try {
+    const payCurrency = mapCurrencyToNowPayments(params.payCurrency);
+
     const response = await fetch(`${NOWPAYMENTS_API_URL}/payment`, {
       method: 'POST',
       headers: {
@@ -49,8 +60,8 @@ export async function createPayment(
       },
       body: JSON.stringify({
         price_amount: params.priceAmount,
-        price_currency: params.priceCurrency,
-        pay_currency: params.payCurrency,
+        price_currency: params.priceCurrency.toLowerCase(),
+        pay_currency: payCurrency,
         order_id: params.orderId,
         order_description: params.orderDescription,
         ipn_callback_url: params.ipnCallbackUrl,
@@ -58,8 +69,9 @@ export async function createPayment(
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      return { success: false, error: `NOWPayments API error: ${error}` };
+      const errorText = await response.text();
+      console.error('NOWPayments API error:', response.status, errorText);
+      return { success: false, error: `Payment gateway error: ${response.status}` };
     }
 
     const data = await response.json();
@@ -67,7 +79,7 @@ export async function createPayment(
     return {
       success: true,
       data: {
-        paymentId: data.payment_id,
+        paymentId: String(data.payment_id),
         payAddress: data.pay_address,
         payAmount: data.pay_amount,
         payCurrency: data.pay_currency,
@@ -77,16 +89,15 @@ export async function createPayment(
         paymentStatus: data.payment_status,
         createdAt: data.created_at,
         expirationEstimateDate: data.expiration_estimate_date,
+        payinExtraId: data.payin_extra_id || null,
+        network: data.network || '',
       },
     };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
-/**
- * Get payment status
- */
 export async function getPaymentStatus(
   paymentId: string
 ): Promise<{ success: boolean; status?: string; error?: string }> {
@@ -107,38 +118,71 @@ export async function getPaymentStatus(
 
     const data = await response.json();
     return { success: true, status: data.payment_status };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
 /**
- * Verify webhook signature (security)
+ * Verify IPN webhook signature per NOWPayments docs:
+ * 1. Sort the payload object by keys recursively
+ * 2. JSON.stringify the sorted object
+ * 3. HMAC-SHA512 with IPN secret
+ * 4. Compare with x-nowpayments-sig header
  */
 export function verifyWebhookSignature(
-  payload: string,
+  rawBody: string,
   signature: string
 ): boolean {
   if (USE_MOCK) {
-    return true; // In mock mode, always valid
+    return true;
   }
 
-  // Real implementation would use HMAC-SHA512
-  const crypto = require('crypto');
-  const secret = process.env.CRYPTO_WEBHOOK_SECRET || '';
-  const hmac = crypto.createHmac('sha512', secret);
-  hmac.update(payload);
-  const expectedSignature = hmac.digest('hex');
+  const secret = process.env.CRYPTO_WEBHOOK_SECRET;
 
-  return signature === expectedSignature;
+  if (!secret) {
+    console.error('CRYPTO_WEBHOOK_SECRET is not configured — rejecting webhook');
+    return false;
+  }
+
+  if (!signature) {
+    return false;
+  }
+
+  try {
+    const payload = JSON.parse(rawBody);
+    const sortedPayload = sortObject(payload);
+    const sortedString = JSON.stringify(sortedPayload);
+
+    const hmac = crypto.createHmac('sha512', secret.trim());
+    hmac.update(sortedString);
+    const expectedSignature = hmac.digest('hex');
+
+    return crypto.timingSafeEqual(
+      Buffer.from(signature, 'hex'),
+      Buffer.from(expectedSignature, 'hex')
+    );
+  } catch (error) {
+    console.error('Webhook signature verification error:', error);
+    return false;
+  }
+}
+
+function sortObject(obj: Record<string, unknown>): Record<string, unknown> {
+  return Object.keys(obj).sort().reduce(
+    (result: Record<string, unknown>, key: string) => {
+      const value = obj[key];
+      result[key] = (value && typeof value === 'object' && !Array.isArray(value))
+        ? sortObject(value as Record<string, unknown>)
+        : value;
+      return result;
+    },
+    {}
+  );
 }
 
 // ─── MOCK IMPLEMENTATION (for development) ───────────────────────────────────
 
-/**
- * Mock payment creation (instant, no real crypto)
- * Now uses live rates from CoinGecko
- */
 async function createMockPayment(
   params: CreatePaymentParams
 ): Promise<{ success: boolean; data: PaymentResponse }> {
@@ -148,48 +192,36 @@ async function createMockPayment(
     USDT: 'TQn9Y2khEsLJW1ChVWFMSMeRDow5Kcbk8e',
   };
 
-  // Get live rates from CoinGecko
   const rates = await getLiveCryptoRates();
+  const upperCoin = params.payCurrency.toUpperCase();
 
-  const mockAmounts: Record<string, number> = {
-    BTC: params.priceAmount / rates.BTC,
-    ETH: params.priceAmount / rates.ETH,
-    USDT: params.priceAmount / rates.USDT,
-  };
+  const payAmount = params.priceAmount / (rates[upperCoin as keyof typeof rates] || 1);
 
   const paymentId = 'MOCK-' + Date.now();
   const expiresAt = new Date();
-  expiresAt.setMinutes(expiresAt.getMinutes() + 30); // 30min expiry
+  expiresAt.setMinutes(expiresAt.getMinutes() + 30);
 
-  console.log('🎭 MOCK PAYMENT CREATED:');
-  console.log(`   Payment ID: ${paymentId}`);
-  console.log(`   Order ID: ${params.orderId}`);
-  console.log(`   Amount: $${params.priceAmount / 100} USD`);
-  console.log(`   Rate (${params.payCurrency}): $${rates[params.payCurrency as keyof typeof rates].toLocaleString()} USD`);
-  console.log(`   Pay: ${mockAmounts[params.payCurrency].toFixed(8)} ${params.payCurrency}`);
-  console.log(`   Address: ${mockAddresses[params.payCurrency]}`);
-  console.log('   Status: waiting (mock will auto-confirm in 10s)');
+  console.log(`🎭 MOCK PAYMENT: ${paymentId} | $${params.priceAmount} → ${payAmount.toFixed(8)} ${upperCoin}`);
 
   return {
     success: true,
     data: {
       paymentId,
-      payAddress: mockAddresses[params.payCurrency] || 'mock_address',
-      payAmount: mockAmounts[params.payCurrency] || 0,
-      payCurrency: params.payCurrency,
+      payAddress: mockAddresses[upperCoin] || 'mock_address',
+      payAmount,
+      payCurrency: mapCurrencyToNowPayments(params.payCurrency),
       priceAmount: params.priceAmount,
       priceCurrency: params.priceCurrency,
       orderId: params.orderId,
       paymentStatus: 'waiting',
       createdAt: new Date().toISOString(),
       expirationEstimateDate: expiresAt.toISOString(),
+      payinExtraId: null,
+      network: upperCoin.toLowerCase(),
     },
   };
 }
 
-/**
- * Simulate a completed payment (for testing)
- */
 export async function simulatePaymentConfirmation(
   paymentId: string,
   orderId: string
@@ -198,12 +230,8 @@ export async function simulatePaymentConfirmation(
     throw new Error('simulatePaymentConfirmation is only available in mock mode');
   }
 
-  console.log(`🎭 SIMULATING PAYMENT CONFIRMATION for ${paymentId}...`);
-
-  // Simulate webhook delay (10 seconds)
   await new Promise((resolve) => setTimeout(resolve, 10000));
 
-  // Call our own webhook
   const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/crypto/webhook`;
 
   try {
@@ -218,15 +246,15 @@ export async function simulatePaymentConfirmation(
         order_id: orderId,
         payment_status: 'finished',
         pay_amount: 0.001,
-        pay_currency: 'BTC',
-        price_amount: 189,
-        price_currency: 'USD',
-        created_at: new Date().toISOString(),
+        pay_currency: 'btc',
+        price_amount: 50,
+        price_currency: 'usd',
+        actually_paid: 0.001,
+        outcome_amount: 0.001,
+        outcome_currency: 'btc',
       }),
     });
-
-    console.log('✅ Mock webhook triggered successfully');
   } catch (error) {
-    console.error('❌ Mock webhook failed:', error);
+    console.error('Mock webhook failed:', error);
   }
 }

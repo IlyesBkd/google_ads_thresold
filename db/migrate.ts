@@ -68,7 +68,7 @@ async function runMigration() {
 
     // ─── 2. Hash admin password and prepare seed ────────────────────────────
     console.log('🔐 Hashing admin password...');
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@adscale.io';
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@gadscale.io';
     const adminPassword = process.env.ADMIN_PASSWORD || 'ChangeThisPassword123!';
     const passwordHash = await bcrypt.hash(adminPassword, 10);
     console.log(`✅ Admin: ${adminEmail}\n`);
@@ -88,8 +88,8 @@ async function runMigration() {
     await pool.query(
       `INSERT INTO products (id, name, description, price, threshold_value, category, low_stock_alert, active)
        VALUES
-         ('PROD-350', '$350 Threshold Account', 'Aged, fully verified Google Ads account with $350 billing threshold unlocked — spend first, pay Google later. Delivered instantly as .txt credentials with login + recovery details.', 18900, 350, 'threshold', 5, true),
-         ('PROD-500', '$500 Threshold Account', 'Higher-limit account with a $500 threshold and extended billing history — built to scale spend from day one. Includes login + recovery details with priority support.', 27900, 500, 'threshold', 5, true)
+         ('starter', 'Starter Threshold Account', 'Google Ads account with $5 already spent — eligible for the €400 free credit promo. Buy for $50, unlock up to €400 in free ads. 8x ROI potential.', 50 * 100, 10, 'threshold', 5, true),
+         ('pro', 'Pro Threshold Account', 'Higher-tier account with $10 spent and a €50 threshold — promo-eligible with more spending room. Buy for $75, unlock up to €400 in free ads. Best value.', 75 * 100, 50, 'threshold', 5, true)
        ON CONFLICT (id) DO NOTHING`
     );
     console.log('✅ 2 products created\n');
@@ -126,7 +126,7 @@ async function runMigration() {
       { key: 'download_validity_hours', value: process.env.DOWNLOAD_LINK_VALIDITY_HOURS || '24' },
       { key: 'download_max_uses', value: process.env.DOWNLOAD_LINK_MAX_USES || '3' },
       { key: 'discord_webhook_url', value: process.env.DISCORD_WEBHOOK_URL || '' },
-      { key: 'telegram_username', value: process.env.TELEGRAM_SUPPORT_USERNAME || '@adscale_support' },
+      { key: 'telegram_username', value: process.env.TELEGRAM_SUPPORT_USERNAME || '@gadscale_support' },
     ];
 
     for (const setting of defaultSettings) {

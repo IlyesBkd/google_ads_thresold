@@ -25,17 +25,17 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       data: {
-        telegram_username: settings.telegram_username || '@adscale_support',
+        telegram_username: settings.telegram_username || '@gadscale_support',
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching public settings:', error);
 
     // Return default values on error
     return NextResponse.json({
       success: true,
       data: {
-        telegram_username: '@adscale_support',
+        telegram_username: '@gadscale_support',
       },
     });
   }

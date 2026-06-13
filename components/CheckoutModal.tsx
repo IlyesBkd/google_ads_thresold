@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type CSSProperties } from "react";
+import { useState, useEffect, useRef, useCallback, type CSSProperties } from "react";
 import type { PayMethod, Product } from "@/lib/data";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -30,6 +30,37 @@ function pillStyle(active: boolean): CSSProperties {
       };
 }
 
+function Skeleton({ width, height }: { width: string; height: string }) {
+  return (
+    <div
+      style={{
+        width,
+        height,
+        borderRadius: "8px",
+        background: "linear-gradient(90deg, #1a1a1a 25%, #252525 50%, #1a1a1a 75%)",
+        backgroundSize: "200% 100%",
+        animation: "shimmer 1.5s infinite",
+      }}
+    />
+  );
+}
+
+function Spinner() {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        width: "16px",
+        height: "16px",
+        border: "2px solid rgba(255,255,255,0.2)",
+        borderTopColor: "#fff",
+        borderRadius: "50%",
+        animation: "spin 0.6s linear infinite",
+      }}
+    />
+  );
+}
+
 const PILLS: { method: PayMethod; label: string }[] = [
   { method: "BTC", label: "₿ BTC" },
   { method: "ETH", label: "Ξ ETH" },
@@ -43,7 +74,7 @@ export default function CheckoutModal({
   checkout: Product;
   onClose: () => void;
 }) {
-  const [step, setStep] = useState<"email" | "payment" | "waiting">("email");
+  const [step, setStep] = useState<"email" | "payment" | "waiting" | "confirmed">("email");
   const [email, setEmail] = useState("");
   const [payMethod, setPayMethod] = useState<PayMethod>("BTC");
   const [copied, setCopied] = useState(false);
@@ -54,8 +85,8 @@ export default function CheckoutModal({
   const [telegramUsername, setTelegramUsername] = useState("");
   const [waitlistLoading, setWaitlistLoading] = useState(false);
   const [waitlistSuccess, setWaitlistSuccess] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  // Payment data from API
   const [paymentData, setPaymentData] = useState<{
     orderId: string;
     payAddress: string;
@@ -64,57 +95,95 @@ export default function CheckoutModal({
     mockMode: boolean;
   } | null>(null);
 
-  // Timer countdown
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
-
-  // Crypto rates
   const [cryptoRates, setCryptoRates] = useState<Record<string, number> | null>(null);
   const [ratesLoading, setRatesLoading] = useState(false);
 
+  // Focus trap refs
+  const modalRef = useRef<HTMLDivElement>(null);
+  const firstFocusRef = useRef<HTMLInputElement>(null);
+
+  // Focus trap: trap focus within modal
+  useEffect(() => {
+    const modal = modalRef.current;
+    if (!modal) return;
+
+    const focusableSelector = 'button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+
+      const focusable = modal.querySelectorAll<HTMLElement>(focusableSelector);
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    modal.addEventListener("keydown", handleTab);
+    // Auto-focus first input on open
+    setTimeout(() => firstFocusRef.current?.focus(), 50);
+
+    return () => modal.removeEventListener("keydown", handleTab);
+  }, [step]);
+
+  // Escape key closes modal
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [onClose]);
+
   // Load saved email from localStorage
   useEffect(() => {
-    const savedEmail = localStorage.getItem("adscale_customer_email");
+    const savedEmail = localStorage.getItem("gadscale_customer_email");
     if (savedEmail) setEmail(savedEmail);
   }, []);
 
   // Fetch crypto rates and stock when modal opens
   useEffect(() => {
-    const fetchRates = async () => {
+    const fetchAll = async () => {
+      setInitialLoading(true);
       setRatesLoading(true);
-      try {
-        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether&vs_currencies=usd');
-        const data = await response.json();
+
+      const [ratesResult, stockResult] = await Promise.allSettled([
+        fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether&vs_currencies=usd').then(r => r.json()),
+        fetch('/api/public/stock').then(r => r.json()),
+      ]);
+
+      if (ratesResult.status === 'fulfilled') {
+        const data = ratesResult.value;
         setCryptoRates({
           BTC: data.bitcoin?.usd || 95000,
           ETH: data.ethereum?.usd || 3500,
           USDT: data.tether?.usd || 1,
         });
-      } catch (error) {
-        console.error('Failed to fetch crypto rates:', error);
-        // Fallback rates
-        setCryptoRates({
-          BTC: 95000,
-          ETH: 3500,
-          USDT: 1,
-        });
+      } else {
+        setCryptoRates({ BTC: 95000, ETH: 3500, USDT: 1 });
       }
+
+      if (stockResult.status === 'fulfilled' && stockResult.value.success) {
+        setAvailableStock(stockResult.value.data[checkout.id] || 0);
+      }
+
       setRatesLoading(false);
+      setInitialLoading(false);
     };
 
-    const fetchStock = async () => {
-      try {
-        const response = await fetch('/api/public/stock');
-        const data = await response.json();
-        if (data.success) {
-          setAvailableStock(data.data[checkout.id] || 0);
-        }
-      } catch (error) {
-        console.error('Failed to fetch stock:', error);
-      }
-    };
-
-    fetchRates();
-    fetchStock();
+    fetchAll();
   }, [checkout.id]);
 
   // Timer countdown
@@ -125,7 +194,7 @@ export default function CheckoutModal({
       const expiresTime = new Date(paymentData.expiresAt).getTime();
       const now = Date.now();
       const diff = Math.max(0, expiresTime - now);
-      setTimeLeft(Math.floor(diff / 1000)); // seconds
+      setTimeLeft(Math.floor(diff / 1000));
 
       if (diff <= 0) {
         clearInterval(interval);
@@ -134,6 +203,31 @@ export default function CheckoutModal({
 
     return () => clearInterval(interval);
   }, [paymentData]);
+
+  // Poll for payment confirmation in waiting step
+  useEffect(() => {
+    if (step !== "waiting" || !paymentData) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/orders/by-email?email=${encodeURIComponent(email)}`);
+        const data = await response.json();
+        if (data.success) {
+          const order = data.data.orders.find(
+            (o: { id: string; status: string }) => o.id === paymentData.orderId
+          );
+          if (order && (order.status === "delivered" || order.status === "paid")) {
+            setStep("confirmed");
+            clearInterval(pollInterval);
+          }
+        }
+      } catch {
+        // Silent retry
+      }
+    }, 5000);
+
+    return () => clearInterval(pollInterval);
+  }, [step, paymentData, email]);
 
   const handleEmailSubmit = async () => {
     if (!email || !email.includes("@")) {
@@ -155,7 +249,6 @@ export default function CheckoutModal({
     setError(null);
 
     try {
-      // Call API to create payment
       const response = await fetch("/api/crypto/create-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -175,10 +268,8 @@ export default function CheckoutModal({
         return;
       }
 
-      // Save email to localStorage
-      localStorage.setItem("adscale_customer_email", email);
+      localStorage.setItem("gadscale_customer_email", email);
 
-      // Store payment data
       const newPaymentData = {
         orderId: data.data.orderId,
         payAddress: data.data.payAddress,
@@ -190,10 +281,15 @@ export default function CheckoutModal({
 
       setStep(newPaymentData.mockMode ? "waiting" : "payment");
       setLoading(false);
-    } catch (err: any) {
-      setError(err.message || "Network error");
+    } catch {
+      setError("Network error. Please check your connection.");
       setLoading(false);
     }
+  };
+
+  const handleRetry = () => {
+    setError(null);
+    setLoading(false);
   };
 
   const handleCopy = () => {
@@ -213,7 +309,6 @@ export default function CheckoutModal({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Calculate total price
   const basePrice = parseInt(checkout.price.replace("$", ""));
   const totalPrice = basePrice * quantity;
 
@@ -247,8 +342,8 @@ export default function CheckoutModal({
 
       setWaitlistSuccess(true);
       setWaitlistLoading(false);
-    } catch (err: any) {
-      setError(err.message || "Network error");
+    } catch {
+      setError("Network error. Please try again.");
       setWaitlistLoading(false);
     }
   };
@@ -257,6 +352,9 @@ export default function CheckoutModal({
     <div
       onClick={onClose}
       className="anim-overlay-in"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Checkout for ${checkout.name}`}
       style={{
         position: "fixed",
         inset: 0,
@@ -270,12 +368,20 @@ export default function CheckoutModal({
         padding: "20px",
       }}
     >
+      <style>{`
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
+
       <div
+        ref={modalRef}
         onClick={(e) => e.stopPropagation()}
         className="anim-modal-in"
         style={{
           width: "100%",
           maxWidth: "440px",
+          maxHeight: "90vh",
+          overflowY: "auto",
           background: "#0E0E0E",
           border: "1px solid rgba(255,255,255,0.1)",
           borderRadius: "20px",
@@ -285,9 +391,9 @@ export default function CheckoutModal({
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
           <span style={{ fontFamily: "var(--font-mono), monospace", fontSize: "11px", letterSpacing: "0.18em", color: "#6A6A6A" }}>
-            {step === "email" ? "CHECKOUT" : step === "payment" ? "PAYMENT" : "PROCESSING"}
+            {step === "email" ? "CHECKOUT" : step === "payment" ? "PAYMENT" : step === "confirmed" ? "CONFIRMED" : "PROCESSING"}
           </span>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "#9A9A9A", fontSize: "24px", cursor: "pointer", lineHeight: 1, padding: 0 }}>
+          <button onClick={onClose} aria-label="Close checkout" style={{ background: "none", border: "none", color: "#9A9A9A", fontSize: "24px", cursor: "pointer", lineHeight: 1, padding: 0 }}>
             ×
           </button>
         </div>
@@ -309,18 +415,51 @@ export default function CheckoutModal({
           </div>
         </div>
 
+        {/* Error with Retry */}
         {error && (
-          <div style={{ marginTop: "16px", padding: "12px", background: "rgba(234,67,53,0.08)", border: "1px solid rgba(234,67,53,0.2)", borderRadius: "10px", color: "#EA4335", fontSize: "13px" }}>
-            {error}
+          <div style={{ marginTop: "16px", padding: "12px", background: "rgba(234,67,53,0.08)", border: "1px solid rgba(234,67,53,0.2)", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+            <span style={{ color: "#EA4335", fontSize: "13px" }}>{error}</span>
+            <button
+              onClick={handleRetry}
+              style={{
+                flexShrink: 0,
+                padding: "6px 14px",
+                background: "rgba(234,67,53,0.12)",
+                border: "1px solid rgba(234,67,53,0.3)",
+                borderRadius: "8px",
+                color: "#EA4335",
+                fontSize: "12px",
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* Loading skeleton */}
+        {step === "email" && initialLoading && (
+          <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <Skeleton width="100%" height="44px" />
+            <Skeleton width="60%" height="20px" />
+            <Skeleton width="100%" height="44px" />
+            <div style={{ display: "flex", gap: "8px" }}>
+              <Skeleton width="33%" height="40px" />
+              <Skeleton width="33%" height="40px" />
+              <Skeleton width="33%" height="40px" />
+            </div>
           </div>
         )}
 
         {/* Step 1: Email + Coin Selection */}
-        {step === "email" && (
+        {step === "email" && !initialLoading && (
           <>
             <div style={{ marginTop: "20px" }}>
               <label style={{ display: "block", fontSize: "13px", color: "#9A9A9A", marginBottom: "8px" }}>Your email</label>
               <input
+                ref={firstFocusRef}
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -354,6 +493,7 @@ export default function CheckoutModal({
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   disabled={quantity <= 1}
+                  aria-label="Decrease quantity"
                   style={{
                     width: "40px",
                     height: "40px",
@@ -380,6 +520,7 @@ export default function CheckoutModal({
                   }}
                   min="1"
                   max={availableStock || 999}
+                  aria-label="Quantity"
                   style={{
                     flex: 1,
                     padding: "12px 14px",
@@ -396,6 +537,7 @@ export default function CheckoutModal({
                 <button
                   onClick={() => setQuantity(Math.min(availableStock || 999, quantity + 1))}
                   disabled={availableStock !== null && quantity >= availableStock}
+                  aria-label="Increase quantity"
                   style={{
                     width: "40px",
                     height: "40px",
@@ -454,20 +596,19 @@ export default function CheckoutModal({
                 fontSize: "15px",
                 cursor: loading || (availableStock !== null && availableStock < quantity) ? "not-allowed" : "pointer",
                 opacity: loading || (availableStock !== null && availableStock < quantity) ? 0.7 : 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
               }}
             >
+              {loading && <Spinner />}
               {loading ? "Creating payment..." : availableStock !== null && availableStock < quantity ? "Not enough stock" : "Continue to payment"}
             </button>
 
-            {/* Waitlist Section - Show when stock is low or out */}
+            {/* Waitlist */}
             {availableStock !== null && availableStock <= 3 && !waitlistSuccess && (
-              <div style={{
-                marginTop: "24px",
-                padding: "20px",
-                background: "rgba(251,188,4,0.06)",
-                border: "1px solid rgba(251,188,4,0.18)",
-                borderRadius: "12px"
-              }}>
+              <div style={{ marginTop: "24px", padding: "20px", background: "rgba(251,188,4,0.06)", border: "1px solid rgba(251,188,4,0.18)", borderRadius: "12px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
                   <span style={{ fontSize: "20px" }}>🔔</span>
                   <div style={{ flex: 1 }}>
@@ -479,44 +620,20 @@ export default function CheckoutModal({
                     </div>
                   </div>
                 </div>
-
                 <div style={{ marginTop: "12px" }}>
-                  <label style={{ display: "block", fontSize: "13px", color: "#E8D9A8", marginBottom: "8px" }}>
-                    Your Telegram username
-                  </label>
+                  <label style={{ display: "block", fontSize: "13px", color: "#E8D9A8", marginBottom: "8px" }}>Your Telegram username</label>
                   <div style={{ display: "flex", gap: "8px" }}>
                     <input
                       type="text"
                       value={telegramUsername}
                       onChange={(e) => setTelegramUsername(e.target.value)}
                       placeholder="@username"
-                      style={{
-                        flex: 1,
-                        padding: "10px 12px",
-                        background: "#080808",
-                        border: "1px solid rgba(251,188,4,0.3)",
-                        borderRadius: "8px",
-                        color: "#F5F5F5",
-                        fontSize: "13px",
-                        fontFamily: "inherit",
-                        outline: "none",
-                      }}
+                      style={{ flex: 1, padding: "10px 12px", background: "#080808", border: "1px solid rgba(251,188,4,0.3)", borderRadius: "8px", color: "#F5F5F5", fontSize: "13px", fontFamily: "inherit", outline: "none" }}
                     />
                     <button
                       onClick={handleWaitlistSubmit}
                       disabled={waitlistLoading || !telegramUsername}
-                      style={{
-                        padding: "10px 20px",
-                        background: waitlistLoading || !telegramUsername ? "#5a4a1a" : "#FBBC04",
-                        color: waitlistLoading || !telegramUsername ? "#9A9A9A" : "#000",
-                        border: "none",
-                        borderRadius: "8px",
-                        fontSize: "13px",
-                        fontWeight: 600,
-                        cursor: waitlistLoading || !telegramUsername ? "not-allowed" : "pointer",
-                        fontFamily: "inherit",
-                        whiteSpace: "nowrap",
-                      }}
+                      style={{ padding: "10px 20px", background: waitlistLoading || !telegramUsername ? "#5a4a1a" : "#FBBC04", color: waitlistLoading || !telegramUsername ? "#9A9A9A" : "#000", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: waitlistLoading || !telegramUsername ? "not-allowed" : "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
                     >
                       {waitlistLoading ? "..." : "Notify me"}
                     </button>
@@ -526,16 +643,7 @@ export default function CheckoutModal({
             )}
 
             {waitlistSuccess && (
-              <div style={{
-                marginTop: "24px",
-                padding: "16px",
-                background: "rgba(52,168,83,0.1)",
-                border: "1px solid rgba(52,168,83,0.25)",
-                borderRadius: "10px",
-                display: "flex",
-                alignItems: "center",
-                gap: "10px"
-              }}>
+              <div style={{ marginTop: "24px", padding: "16px", background: "rgba(52,168,83,0.1)", border: "1px solid rgba(52,168,83,0.25)", borderRadius: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
                 <span style={{ fontSize: "18px" }}>✅</span>
                 <div style={{ fontSize: "13px", color: "#5BD17E" }}>
                   You're on the list! We'll message you on Telegram when we restock.
@@ -563,36 +671,12 @@ export default function CheckoutModal({
               Send exactly {paymentData.payAmount.toFixed(8)} {payMethod}
             </div>
 
-            {/* QR Code */}
-            <div style={{
-              marginTop: "16px",
-              textAlign: "center",
-              padding: "20px",
-              background: "#080808",
-              borderRadius: "12px",
-              border: "1px solid rgba(255,255,255,0.1)"
-            }}>
-              <div style={{
-                fontSize: "12px",
-                color: "#9A9A9A",
-                marginBottom: "12px",
-                fontFamily: "var(--font-mono), monospace",
-                letterSpacing: "0.5px"
-              }}>
+            <div style={{ marginTop: "16px", textAlign: "center", padding: "20px", background: "#080808", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)" }}>
+              <div style={{ fontSize: "12px", color: "#9A9A9A", marginBottom: "12px", fontFamily: "var(--font-mono), monospace", letterSpacing: "0.5px" }}>
                 SCAN WITH MOBILE WALLET
               </div>
-              <div style={{
-                display: "inline-block",
-                padding: "12px",
-                background: "#FFFFFF",
-                borderRadius: "8px"
-              }}>
-                <QRCodeSVG
-                  value={paymentData.payAddress}
-                  size={180}
-                  level="M"
-                  includeMargin={false}
-                />
+              <div style={{ display: "inline-block", padding: "12px", background: "#FFFFFF", borderRadius: "8px" }}>
+                <QRCodeSVG value={paymentData.payAddress} size={180} level="M" includeMargin={false} />
               </div>
             </div>
 
@@ -626,7 +710,9 @@ export default function CheckoutModal({
         {step === "waiting" && paymentData && (
           <>
             <div style={{ textAlign: "center", padding: "32px 0" }}>
-              <div style={{ fontSize: "48px", marginBottom: "16px" }}>⏳</div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
+                <span style={{ display: "inline-block", width: "40px", height: "40px", border: "3px solid rgba(66,133,244,0.2)", borderTopColor: "#4285F4", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+              </div>
               <div style={{ fontSize: "16px", fontWeight: 600, color: "#FAFAFA", marginBottom: "8px" }}>
                 Processing payment...
               </div>
@@ -639,6 +725,75 @@ export default function CheckoutModal({
             <div style={{ padding: "12px", background: "rgba(66,133,244,0.06)", border: "1px solid rgba(66,133,244,0.16)", borderRadius: "10px" }}>
               <div style={{ fontSize: "11px", fontFamily: "var(--font-mono), monospace", color: "#4285F4", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Order ID</div>
               <div style={{ fontSize: "14px", fontFamily: "var(--font-mono), monospace", color: "#F5F5F5" }}>{paymentData.orderId}</div>
+            </div>
+          </>
+        )}
+
+        {/* Step 4: Confirmation */}
+        {step === "confirmed" && paymentData && (
+          <>
+            <div style={{ textAlign: "center", padding: "32px 0" }}>
+              <div style={{ fontSize: "56px", marginBottom: "16px" }}>✅</div>
+              <div style={{ fontSize: "20px", fontWeight: 600, color: "#FAFAFA", marginBottom: "8px" }}>
+                Payment confirmed!
+              </div>
+              <div style={{ fontSize: "14px", color: "#9A9A9A", lineHeight: 1.6 }}>
+                Your credentials have been sent to<br />
+                <strong style={{ color: "#F5F5F5" }}>{email}</strong>
+              </div>
+            </div>
+
+            <div style={{ padding: "16px", background: "rgba(52,168,83,0.08)", border: "1px solid rgba(52,168,83,0.2)", borderRadius: "12px", marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
+                <span style={{ fontSize: "16px" }}>📧</span>
+                <span style={{ fontSize: "14px", color: "#5BD17E", fontWeight: 500 }}>Check your inbox</span>
+              </div>
+              <div style={{ fontSize: "13px", color: "#9A9A9A", lineHeight: 1.5 }}>
+                Download link sent to your email. If you don't see it within 2 minutes, check your spam folder.
+              </div>
+            </div>
+
+            <div style={{ padding: "12px", background: "rgba(66,133,244,0.06)", border: "1px solid rgba(66,133,244,0.16)", borderRadius: "10px", marginBottom: "16px" }}>
+              <div style={{ fontSize: "11px", fontFamily: "var(--font-mono), monospace", color: "#4285F4", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Order ID</div>
+              <div style={{ fontSize: "14px", fontFamily: "var(--font-mono), monospace", color: "#F5F5F5" }}>{paymentData.orderId}</div>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              <a
+                href="/account"
+                style={{
+                  flex: 1,
+                  padding: "13px",
+                  background: "#4285F4",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "11px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  textAlign: "center",
+                  textDecoration: "none",
+                  cursor: "pointer",
+                }}
+              >
+                View My Orders
+              </a>
+              <button
+                onClick={onClose}
+                style={{
+                  flex: 1,
+                  padding: "13px",
+                  background: "transparent",
+                  color: "#9A9A9A",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "11px",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                Close
+              </button>
             </div>
           </>
         )}

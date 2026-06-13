@@ -6,6 +6,7 @@
 import { query, queryOne, execute } from './db';
 import { sendCredentialsEmail } from './email';
 import { Order, StockItem, DownloadToken, Product } from './types';
+import { getErrorMessage } from './errors';
 import crypto from 'crypto';
 
 /**
@@ -42,29 +43,36 @@ export async function deliverOrder(
       return { success: false, error: 'Order must be paid before delivery' };
     }
 
-    // 2. Check available stock
-    const availableStock = await query<StockItem>(
-      `SELECT * FROM stock_items
-       WHERE product_id = $1 AND status = 'available'
-       LIMIT $2`,
-      [order.product_id, order.quantity]
-    );
-
-    if (availableStock.length < order.quantity) {
-      return {
-        success: false,
-        error: `Insufficient stock: need ${order.quantity}, have ${availableStock.length}`,
-      };
-    }
-
-    // 3. Assign credentials to order (mark as sold)
-    const credentialIds = availableStock.map((c) => c.id);
-    await execute(
+    // 2. Atomically claim available stock (prevents race conditions)
+    const claimedStock = await query<StockItem>(
       `UPDATE stock_items
        SET status = 'sold', order_id = $1, updated_at = NOW()
-       WHERE id = ANY($2::text[])`,
-      [orderId, credentialIds]
+       WHERE id IN (
+         SELECT id FROM stock_items
+         WHERE product_id = $2 AND status = 'available'
+         ORDER BY created_at
+         LIMIT $3
+         FOR UPDATE SKIP LOCKED
+       )
+       RETURNING *`,
+      [orderId, order.product_id, order.quantity]
     );
+
+    if (claimedStock.length < order.quantity) {
+      // Rollback any partially claimed items
+      if (claimedStock.length > 0) {
+        await execute(
+          `UPDATE stock_items
+           SET status = 'available', order_id = NULL, updated_at = NOW()
+           WHERE order_id = $1 AND status = 'sold'`,
+          [orderId]
+        );
+      }
+      return {
+        success: false,
+        error: `Insufficient stock: need ${order.quantity}, have ${claimedStock.length}`,
+      };
+    }
 
     // 4. Update order status
     await execute(
@@ -128,12 +136,12 @@ export async function deliverOrder(
 
     return {
       success: true,
-      deliveredCount: credentialIds.length,
+      deliveredCount: claimedStock.length,
       downloadToken: token,
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Delivery error:', error);
-    return { success: false, error: error.message || 'Delivery failed' };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -204,8 +212,8 @@ export async function getCredentialsForToken(
       orderId: order.id,
       productName: order.product_name,
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Get credentials error:', error);
-    return { success: false, error: error.message || 'Failed to retrieve credentials' };
+    return { success: false, error: getErrorMessage(error) };
   }
 }

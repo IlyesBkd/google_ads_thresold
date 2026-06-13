@@ -1,11 +1,12 @@
+import { getErrorMessage } from './errors';
 /**
  * Email service using Resend
  */
 
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.EMAIL_API_KEY);
-const FROM_EMAIL = process.env.EMAIL_FROM || 'noreply@adscale.io';
+const resend = new Resend(process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY);
+const FROM_EMAIL = process.env.RESEND_FROM || process.env.EMAIL_FROM || 'noreply@gadscale.com';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 /**
@@ -41,9 +42,9 @@ export async function sendCredentialsEmail(
     });
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Email send error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -80,7 +81,7 @@ function getCredentialsEmailHtml({
           <i style="display: inline-block; width: 4px; height: 13px; border-radius: 2px; background: #4285F4;"></i>
           <i style="display: inline-block; width: 4px; height: 18px; border-radius: 2px; background: #FBBC04;"></i>
         </span>
-        <span style="font-size: 20px; font-weight: 600; letter-spacing: -0.02em; color: #F5F5F5;">ADSCALE</span>
+        <span style="font-size: 20px; font-weight: 600; letter-spacing: -0.02em; color: #F5F5F5;">GADSCALE</span>
       </div>
       <h1 style="margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.03em; color: #FAFAFA;">Your account is ready</h1>
     </div>
@@ -138,7 +139,7 @@ function getCredentialsEmailHtml({
     <!-- Footer -->
     <div style="text-align: center; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.06);">
       <p style="margin: 0 0 8px; font-size: 12px; color: #6A6A6A;">
-        © 2026 ADSCALE · Threshold accounts delivered instantly
+        © 2026 GADSCALE · Threshold accounts delivered instantly
       </p>
       <p style="margin: 0; font-size: 12px; color: #6A6A6A;">
         This is an automated email. Do not reply to this address.
@@ -166,7 +167,7 @@ function getCredentialsEmailText({
   expiresIn: number;
 }) {
   return `
-ADSCALE - Your account is ready
+GADSCALE - Your account is ready
 
 Your ${productName} has been delivered and is ready to use.
 
@@ -187,7 +188,7 @@ NEED HELP?
 If you have any questions or the download link doesn't work, contact us on Discord or reply to this email with your order ID.
 
 ---
-© 2026 ADSCALE · Threshold accounts delivered instantly
+© 2026 GADSCALE · Threshold accounts delivered instantly
 This is an automated email. Do not reply to this address.
   `;
 }

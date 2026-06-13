@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "ADSCALE Admin",
-  description: "ADSCALE administration panel",
+  title: "GADSCALE Admin",
+  description: "GADSCALE administration panel",
 };
 
 export default function AdminLayout({

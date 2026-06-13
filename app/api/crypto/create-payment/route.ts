@@ -2,25 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { execute, queryOne } from '@/lib/db';
 import { createPayment, simulatePaymentConfirmation } from '@/lib/nowpayments';
 import { Product } from '@/lib/types';
+import { createPaymentSchema } from '@/lib/validation';
 
 export async function POST(request: NextRequest) {
   try {
-    const { productId, quantity, customerEmail, coin } = await request.json();
+    const body = await request.json();
+    const parsed = createPaymentSchema.safeParse(body);
 
-    // Validation
-    if (!productId || !quantity || !customerEmail || !coin) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
+        { success: false, error: parsed.error.issues[0].message },
         { status: 400 }
       );
     }
 
-    if (!['BTC', 'ETH', 'USDT'].includes(coin)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid coin. Must be BTC, ETH, or USDT' },
-        { status: 400 }
-      );
-    }
+    const { productId, quantity, customerEmail, coin } = parsed.data;
 
     // Get product
     const product = await queryOne<Product>(
@@ -55,7 +51,7 @@ export async function POST(request: NextRequest) {
     const totalAmount = product.price * quantity; // in cents
 
     // Create order
-    const orderId = 'ORD-' + Date.now();
+    const orderId = crypto.randomUUID();
 
     await execute(
       `INSERT INTO orders (
@@ -132,7 +128,7 @@ export async function POST(request: NextRequest) {
         mockMode: isMockMode,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Create payment error:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },

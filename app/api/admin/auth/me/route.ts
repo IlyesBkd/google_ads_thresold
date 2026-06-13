@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@/lib/errors';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/jwt';
 import { query } from '@/lib/db';
@@ -31,9 +32,9 @@ export async function GET(request: NextRequest) {
         createdAt: admin.created_at,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     return NextResponse.json(
-      { success: false, error: error.message || 'Unauthorized' },
+      { success: false, error: getErrorMessage(error) || 'Unauthorized' },
       { status: 401 }
     );
   }

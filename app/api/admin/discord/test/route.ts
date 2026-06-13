@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@/lib/errors';
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { requireAuth } from '@/lib/jwt';
@@ -43,12 +44,12 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Test notification sent successfully',
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Discord test error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Internal server error',
+        error: getErrorMessage(error) || 'Internal server error',
       },
       { status: 500 }
     );

@@ -18,15 +18,19 @@ export async function GET() {
       stock[row.product_id] = parseInt(row.count, 10);
     });
 
-    // Ensure both products have entries (even if 0)
-    if (!stock["350"]) stock["350"] = 0;
-    if (!stock["500"]) stock["500"] = 0;
+    // Ensure all active products have entries (even if 0)
+    const activeProducts = await query<{ id: string }>(
+      "SELECT id FROM products WHERE active = true"
+    );
+    for (const p of activeProducts) {
+      if (!stock[p.id]) stock[p.id] = 0;
+    }
 
     return NextResponse.json({
       success: true,
       data: stock,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to fetch stock:", error);
     return NextResponse.json(
       {

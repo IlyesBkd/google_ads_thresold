@@ -25,7 +25,7 @@ export default function Footer() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <BarsMark variant="footer" />
-          <span>© 2026 ADSCALE</span>
+          <span>© 2026 GADSCALE</span>
         </div>
         <div style={{ display: "flex", gap: "22px", flexWrap: "wrap" }}>
           <a href="#pricing" className="footer-link" style={{ color: "#6A6A6A", textDecoration: "none" }}>

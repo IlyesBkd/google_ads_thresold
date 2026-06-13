@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@/lib/errors';
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { requireAuth } from '@/lib/jwt';
@@ -24,11 +25,11 @@ export async function GET(request: NextRequest) {
       success: true,
       data: settings,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching settings:', error);
-    const status = error.message?.includes('Unauthorized') ? 401 : 500;
+    const status = getErrorMessage(error)?.includes('Unauthorized') ? 401 : 500;
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch settings' },
+      { success: false, error: getErrorMessage(error) || 'Failed to fetch settings' },
       { status }
     );
   }
@@ -77,11 +78,11 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Settings saved successfully',
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error saving settings:', error);
-    const status = error.message?.includes('Unauthorized') ? 401 : 500;
+    const status = getErrorMessage(error)?.includes('Unauthorized') ? 401 : 500;
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to save settings' },
+      { success: false, error: getErrorMessage(error) || 'Failed to save settings' },
       { status }
     );
   }

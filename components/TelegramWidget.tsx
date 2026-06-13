@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
  * Configurable from admin settings (telegram_username)
  */
 export default function TelegramWidget() {
-  const [username, setUsername] = useState('@adscale_support');
+  const [username, setUsername] = useState('@Selling_GAds');
   const [visible, setVisible] = useState(false);
 
   // Fetch Telegram username from settings

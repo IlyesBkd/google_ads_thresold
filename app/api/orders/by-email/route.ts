@@ -1,25 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { ordersByEmailSchema } from "@/lib/validation";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const email = searchParams.get("email");
+    const parsed = ordersByEmailSchema.safeParse({ email: searchParams.get("email") });
 
-    if (!email) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: "Email is required" },
+        { success: false, error: "Valid email is required" },
         { status: 400 }
       );
     }
 
-    // Validate email format
-    if (!email.includes("@")) {
-      return NextResponse.json(
-        { success: false, error: "Invalid email format" },
-        { status: 400 }
-      );
-    }
+    const email = parsed.data.email;
 
     // Fetch orders for this email with product details and download token
     const orders = await query<{
@@ -106,7 +101,7 @@ export async function GET(request: NextRequest) {
         totalOrders: formattedOrders.length,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Fetch orders by email error:", error);
     return NextResponse.json(
       {

@@ -57,7 +57,7 @@ export default function DownloadPage() {
             <i style={{ width: '4px', height: '13px', borderRadius: '2px', background: '#4285F4' }}></i>
             <i style={{ width: '4px', height: '18px', borderRadius: '2px', background: '#FBBC04' }}></i>
           </span>
-          <span style={{ fontSize: '20px', fontWeight: 600, letterSpacing: '-0.02em' }}>ADSCALE</span>
+          <span style={{ fontSize: '20px', fontWeight: 600, letterSpacing: '-0.02em' }}>GADSCALE</span>
         </div>
 
         {/* Card */}

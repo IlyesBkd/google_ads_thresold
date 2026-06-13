@@ -1,29 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { waitlistSchema } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
   try {
-    const { productId, telegramUsername, email } = await request.json();
+    const body = await request.json();
+    const parsed = waitlistSchema.safeParse(body);
 
-    // Validation
-    if (!productId || !telegramUsername) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: "Product ID and Telegram username are required" },
+        { success: false, error: parsed.error.issues[0].message },
         { status: 400 }
       );
     }
 
-    // Validate Telegram username format (starts with @)
+    const { productId, telegramUsername, email } = parsed.data;
+
     const cleanUsername = telegramUsername.startsWith("@")
       ? telegramUsername
       : `@${telegramUsername}`;
-
-    if (!/^@[a-zA-Z0-9_]{5,32}$/.test(cleanUsername)) {
-      return NextResponse.json(
-        { success: false, error: "Invalid Telegram username format" },
-        { status: 400 }
-      );
-    }
 
     // Check if product exists
     const productCheck = await query(
@@ -51,7 +46,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: "You'll be notified on Telegram when stock is available",
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Waitlist registration error:", error);
     return NextResponse.json(
       {
@@ -90,7 +85,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: { count },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Waitlist fetch error:", error);
     return NextResponse.json(
       {

@@ -2,179 +2,32 @@
 
 import React, { useState, useEffect, useCallback, CSSProperties } from "react";
 import { api } from '@/lib/api-client';
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-type Page = "dashboard" | "products" | "inventory" | "orders" | "settings" | "logs" | "waitlist";
-type OrderStatus = "pending" | "paid" | "delivered" | "failed" | "refunded";
-type CredentialStatus = "available" | "reserved" | "sold" | "error";
-type LogType = "import" | "sale" | "delivery" | "login" | "error" | "refund";
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  thresholdValue: number;
-  category: string;
-  totalImported: number;
-  sold: number;
-  remaining: number;
-  lowStockAlert: number;
-  active: boolean;
-}
-
-interface Credential {
-  id: string;
-  email: string;
-  password: string;
-  productId: string;
-  status: CredentialStatus;
-  dateAdded: string;
-  orderId: string | null;
-}
-
-interface Order {
-  id: string;
-  date: string;
-  customer: string;
-  productId: string;
-  qty: number;
-  amount: number;
-  coin: string;
-  status: OrderStatus;
-  wallet: string;
-  txHash: string;
-  createdAt: string;
-  paidAt: string;
-  deliveredAt: string;
-  deliveredCredentials: string[];
-}
-
-interface LogEntry {
-  id: number;
-  message: string;
-  type: LogType;
-  timestamp: string;
-}
-
-interface Admin {
-  email: string;
-  role: string;
-}
-
-interface WaitlistEntry {
-  id: string;
-  product_id: string;
-  telegram_username: string;
-  email: string | null;
-  notified: boolean;
-  notified_at: string | null;
-  created_at: string;
-}
-
-// ─── Dashboard Stats Interface ──────────────────────────────────────────────
-
-interface DashboardStats {
-  revenueToday: number;
-  revenueWeek: number;
-  revenueMonth: number;
-  sales30d: number;
-  totalStock: number;
-}
-
-interface LogsData {
-  logs: LogEntry[];
-  total: number;
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function maskEmail(email: string): string {
-  const [local, domain] = email.split("@");
-  if (!domain) return email;
-  const prefix = local.slice(0, 3);
-  return `${prefix}***@${domain}`;
-}
-
-function maskCredential(email: string): string {
-  return `${maskEmail(email)}:${"\\u2022".repeat(6)}`;
-}
-
-// ─── Style Constants ─────────────────────────────────────────────────────────
-
-const COLORS = {
-  bg: "#080808",
-  card: "#0C0C0C",
-  sidebar: "#0A0A0A",
-  border: "rgba(255,255,255,0.08)",
-  primary: "#4285F4",
-  green: "#34A853",
-  red: "#EA4335",
-  yellow: "#FBBC04",
-  text: "#FAFAFA",
-  textSecondary: "#9A9A9A",
-  textMuted: "#6A6A6A",
-};
-
-const statusColor: Record<OrderStatus, string> = {
-  pending: COLORS.yellow,
-  paid: COLORS.primary,
-  delivered: COLORS.green,
-  refunded: COLORS.textMuted,
-  failed: COLORS.red,
-};
-
-const credentialStatusColor: Record<CredentialStatus, string> = {
-  available: COLORS.green,
-  reserved: COLORS.yellow,
-  sold: COLORS.primary,
-  error: COLORS.red,
-};
-
-const logTypeColor: Record<LogType, string> = {
-  import: "#8E24AA",
-  sale: COLORS.primary,
-  delivery: COLORS.green,
-  login: COLORS.textMuted,
-  error: COLORS.red,
-  refund: COLORS.yellow,
-};
-
-// ─── Components ──────────────────────────────────────────────────────────────
+import {
+  Sidebar,
+  TopBar,
+  Toast,
+  DashboardPage,
+  LogsPage,
+  WaitlistPage,
+  COLORS,
+  statusColor,
+  credentialStatusColor,
+  maskEmail,
+  type Page,
+  type Product,
+  type Credential,
+  type Order,
+  type OrderStatus,
+  type LogEntry,
+  type DashboardStats,
+  type WaitlistEntry,
+} from './components';
 
 function BarsMark({ size = 24 }: { size?: number }) {
-  const barW = size * 0.18;
-  const gap = size * 0.12;
-  const totalW = barW * 3 + gap * 2;
-  const startX = (size - totalW) / 2;
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none">
-      <rect x={startX} y={size * 0.5} width={barW} height={size * 0.35} rx={barW / 2} fill="#4285F4" />
-      <rect x={startX + barW + gap} y={size * 0.3} width={barW} height={size * 0.55} rx={barW / 2} fill="#4285F4" />
-      <rect x={startX + (barW + gap) * 2} y={size * 0.15} width={barW} height={size * 0.7} rx={barW / 2} fill="#FBBC04" />
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="/logo.png" alt="GADSCALE" width={size} height={size} style={{ display: "inline-block", verticalAlign: "middle" }} />
   );
-}
-
-function Toast({ message, visible }: { message: string; visible: boolean }) {
-  const style: CSSProperties = {
-    position: "fixed",
-    bottom: visible ? 32 : -60,
-    left: "50%",
-    transform: "translateX(-50%)",
-    background: "#1A1A1A",
-    border: `1px solid ${COLORS.border}`,
-    borderRadius: 10,
-    padding: "12px 24px",
-    color: COLORS.text,
-    fontFamily: "var(--font-inter)",
-    fontSize: 14,
-    zIndex: 9999,
-    transition: "bottom 0.3s ease",
-    whiteSpace: "nowrap",
-  };
-  return <div style={style}>{message}</div>;
 }
 
 // ─── Main Admin Component ────────────────────────────────────────────────────
@@ -593,382 +446,11 @@ export default function AdminPage() {
     return p ? p.name : productId;
   };
 
-  // ─── Navigation Items ────────────────────────────────────────────────────
+  // ─── Navigation handler ──────────────────────────────────────────────────
 
-  const navItems: { page: Page; label: string; icon: React.ReactNode }[] = [
-    {
-      page: "dashboard", label: "Dashboard",
-      icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="1" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="1.5"/><rect x="10" y="1" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="1.5"/><rect x="1" y="10" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="1.5"/><rect x="10" y="10" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="1.5"/></svg>,
-    },
-    {
-      page: "products", label: "Products",
-      icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M15 5l-6-3L3 5v2l6 3 6-3V5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M3 7v4l6 3 6-3V7" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>,
-    },
-    {
-      page: "inventory", label: "Inventory",
-      icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 5h12v10a1 1 0 01-1 1H4a1 1 0 01-1-1V5z" stroke="currentColor" strokeWidth="1.5"/><path d="M2 3a1 1 0 011-1h12a1 1 0 011 1v2H2V3z" stroke="currentColor" strokeWidth="1.5"/><path d="M7 8h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
-    },
-    {
-      page: "orders", label: "Orders",
-      icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 4l2-2h10l2 2v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4z" stroke="currentColor" strokeWidth="1.5"/><path d="M6 8h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
-    },
-    {
-      page: "settings", label: "Settings",
-      icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 5h12M3 9h12M3 13h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="6" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="9" r="1.5" fill="currentColor"/><circle cx="8" cy="13" r="1.5" fill="currentColor"/></svg>,
-    },
-    {
-      page: "logs", label: "Logs",
-      icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 9h2l2-4 3 8 2-6 2 3h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-    },
-    {
-      page: "waitlist", label: "Waitlist",
-      icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1v4M9 13v4M1 9h4M13 9h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="9" cy="9" r="3" stroke="currentColor" strokeWidth="1.5"/></svg>,
-    },
-  ];
-
-  // ─── Page Titles ─────────────────────────────────────────────────────────
-
-  const pageTitles: Record<Page, { eyebrow: string; title: string }> = {
-    dashboard: { eyebrow: "Overview", title: "Dashboard" },
-    products: { eyebrow: "Catalog", title: "Products" },
-    inventory: { eyebrow: "Stock", title: "Inventory" },
-    orders: { eyebrow: "Commerce", title: "Orders" },
-    settings: { eyebrow: "System", title: "Settings" },
-    logs: { eyebrow: "Activity", title: "Logs" },
-    waitlist: { eyebrow: "Notifications", title: "Waitlist" },
-  };
-
-  // ─── Sidebar ─────────────────────────────────────────────────────────────
-
-  const sidebarStyle: CSSProperties = {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: 248,
-    height: "100vh",
-    background: COLORS.sidebar,
-    borderRight: `1px solid ${COLORS.border}`,
-    display: "flex",
-    flexDirection: "column",
-    zIndex: 100,
-    transition: "transform 0.25s ease",
-    fontFamily: "var(--font-inter)",
-  };
-
-  const renderSidebar = () => (
-    <aside style={sidebarStyle} id="admin-sidebar" data-open={sidebarOpen}>
-      {/* Logo */}
-      <div style={{ padding: "24px 20px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-        <BarsMark size={28} />
-        <span style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, letterSpacing: 1.2 }}>THRESHOLDS</span>
-        <span style={{
-          fontSize: 10,
-          fontWeight: 600,
-          color: COLORS.primary,
-          background: "rgba(66,133,244,0.12)",
-          padding: "2px 8px",
-          borderRadius: 999,
-          fontFamily: "var(--font-mono)",
-          letterSpacing: 0.5,
-        }}>ADMIN</span>
-      </div>
-
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: "8px 12px", display: "flex", flexDirection: "column", gap: 2 }}>
-        {navItems.map((item) => {
-          const active = currentPage === item.page;
-          return (
-            <button
-              key={item.page}
-              onClick={() => { setCurrentPage(item.page); setSidebarOpen(false); }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "10px 14px",
-                border: "none",
-                borderLeft: active ? `3px solid ${COLORS.primary}` : "3px solid transparent",
-                background: active ? "rgba(66,133,244,0.08)" : "transparent",
-                borderRadius: 8,
-                color: active ? COLORS.text : COLORS.textSecondary,
-                fontSize: 14,
-                fontWeight: active ? 500 : 400,
-                cursor: "pointer",
-                width: "100%",
-                textAlign: "left",
-                fontFamily: "var(--font-inter)",
-                transition: "background 0.15s",
-              }}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          );
-        })}
-      </nav>
-
-      {/* User card */}
-      <div style={{ padding: "16px 16px 20px", borderTop: `1px solid ${COLORS.border}` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-          <div style={{
-            width: 34,
-            height: 34,
-            borderRadius: "50%",
-            background: "rgba(66,133,244,0.15)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 12,
-            fontWeight: 600,
-            color: COLORS.primary,
-            fontFamily: "var(--font-mono)",
-          }}>{adminEmail.slice(0, 2).toUpperCase()}</div>
-          <div>
-            <div style={{ fontSize: 13, color: COLORS.text, fontWeight: 500 }}>{adminEmail}</div>
-            <div style={{ fontSize: 11, color: COLORS.textMuted }}>Admin</div>
-          </div>
-        </div>
-        <button
-          onClick={handleLogout}
-          style={{
-            width: "100%",
-            padding: "8px",
-            background: "transparent",
-            border: `1px solid ${COLORS.border}`,
-            borderRadius: 8,
-            color: COLORS.textSecondary,
-            fontSize: 12,
-            cursor: "pointer",
-            fontFamily: "var(--font-inter)",
-          }}
-        >
-          Log out
-        </button>
-      </div>
-    </aside>
-  );
-
-  // ─── Top Bar ─────────────────────────────────────────────────────────────
-
-  const renderTopBar = () => (
-    <header style={{
-      position: "sticky",
-      top: 0,
-      zIndex: 50,
-      background: COLORS.bg,
-      borderBottom: `1px solid ${COLORS.border}`,
-      padding: "16px 28px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        {/* Hamburger for mobile */}
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          data-hamburger=""
-          style={{
-            display: "none",
-            background: "transparent",
-            border: "none",
-            color: COLORS.text,
-            cursor: "pointer",
-            padding: 4,
-          }}
-        >
-          <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 6h16M3 11h16M3 16h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-        </button>
-        <div>
-          <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: COLORS.primary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>
-            {pageTitles[currentPage].eyebrow}
-          </div>
-          <div style={{ fontSize: 20, fontWeight: 600, color: COLORS.text }}>
-            {pageTitles[currentPage].title}
-          </div>
-        </div>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{
-          width: 8,
-          height: 8,
-          borderRadius: "50%",
-          background: COLORS.green,
-          animation: "pulse 2s infinite",
-        }} />
-        <span style={{ fontSize: 12, color: COLORS.textSecondary, fontFamily: "var(--font-mono)" }}>Live</span>
-      </div>
-    </header>
-  );
-
-  // ─── Dashboard ───────────────────────────────────────────────────────────
-
-  const renderDashboard = () => {
-    if (loading || !dashboardStats) {
-      return (
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
-          <div style={{ fontSize: 14, color: COLORS.textSecondary }}>Loading dashboard...</div>
-        </div>
-      );
-    }
-
-    const totalRemaining = dashboardStats.totalStock;
-    const stats = [
-      { label: "Revenue today", value: `$${(dashboardStats.revenueToday / 100).toFixed(0)}`, delta: "+12%", deltaColor: COLORS.green },
-      { label: "Revenue this week", value: `$${(dashboardStats.revenueWeek / 100).toLocaleString()}`, delta: "+8%", deltaColor: COLORS.green },
-      { label: "Revenue this month", value: `$${(dashboardStats.revenueMonth / 100).toLocaleString()}`, delta: "+23%", deltaColor: COLORS.green },
-      { label: "Sales (30d)", value: String(dashboardStats.sales30d), delta: "+5", deltaColor: COLORS.green },
-      { label: "Total stock remaining", value: String(totalRemaining), delta: "across all products", deltaColor: COLORS.textSecondary },
-    ];
-
-    const lowStockProducts = products.filter((p) => p.remaining <= p.lowStockAlert);
-    const chartData = [320, 280, 410, 390, 450, 520, 480, 390, 550, 610, 580, 640, 590, 698];
-
-    return (
-      <div>
-        {/* Stats grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
-          {stats.map((s, i) => (
-            <div key={i} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: "20px 22px" }}>
-              <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>{s.label}</div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: COLORS.text, fontFamily: "var(--font-mono)", marginBottom: 4 }}>{s.value}</div>
-              <div style={{ fontSize: 12, color: s.deltaColor }}>{s.delta}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Low-stock alert banner */}
-        {lowStockProducts.length > 0 && (
-          <div style={{
-            background: "rgba(251,188,4,0.06)",
-            border: `1px solid rgba(251,188,4,0.2)`,
-            borderRadius: 12,
-            padding: "14px 20px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 24,
-          }}>
-            <span style={{ fontSize: 14, color: COLORS.yellow }}>
-              {lowStockProducts.map((p) => `${p.name} has only ${p.remaining} accounts left (below threshold of ${p.lowStockAlert})`).join(" | ")}
-            </span>
-            <button
-              onClick={() => setCurrentPage("inventory")}
-              style={{
-                padding: "6px 16px",
-                background: "rgba(251,188,4,0.12)",
-                border: `1px solid rgba(251,188,4,0.3)`,
-                borderRadius: 8,
-                color: COLORS.yellow,
-                fontSize: 12,
-                fontWeight: 500,
-                cursor: "pointer",
-                fontFamily: "var(--font-inter)",
-              }}
-            >Restock</button>
-          </div>
-        )}
-
-        {/* No low-stock: show paid orders awaiting delivery */}
-        {lowStockProducts.length === 0 && orders.filter((o) => o.status === "paid").length > 0 && (
-          <div style={{
-            background: "rgba(66,133,244,0.06)",
-            border: `1px solid rgba(66,133,244,0.2)`,
-            borderRadius: 12,
-            padding: "14px 20px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 24,
-          }}>
-            <span style={{ fontSize: 14, color: COLORS.primary }}>{orders.filter((o) => o.status === "paid").length} paid orders awaiting delivery</span>
-            <button
-              onClick={() => { setCurrentPage("orders"); setOrderFilter("paid"); }}
-              style={{
-                padding: "6px 16px",
-                background: "rgba(66,133,244,0.12)",
-                border: `1px solid rgba(66,133,244,0.3)`,
-                borderRadius: 8,
-                color: COLORS.primary,
-                fontSize: 12,
-                fontWeight: 500,
-                cursor: "pointer",
-                fontFamily: "var(--font-inter)",
-              }}
-            >Review</button>
-          </div>
-        )}
-
-        {/* Charts row */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
-          {/* Revenue chart */}
-          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: "22px" }}>
-            <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 16 }}>Revenue 14d</div>
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 120 }}>
-              {chartData.map((v, i) => {
-                const maxV = Math.max(...chartData);
-                const h = (v / maxV) * 100;
-                return (
-                  <div key={i} style={{
-                    flex: 1,
-                    height: `${h}%`,
-                    background: i === chartData.length - 1 ? COLORS.primary : "rgba(255,255,255,0.08)",
-                    borderRadius: 4,
-                    minWidth: 0,
-                  }} />
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Stock breakdown */}
-          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: "22px" }}>
-            <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 20 }}>Stock breakdown</div>
-            {products.map((p) => {
-              const pct = p.totalImported > 0 ? Math.round((p.remaining / p.totalImported) * 100) : 0;
-              return (
-                <div key={p.id} style={{ marginBottom: 16 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                    <span style={{ fontSize: 13, color: COLORS.text }}>{p.name.replace(" Account", "")}</span>
-                    <span style={{ fontSize: 13, color: COLORS.textSecondary, fontFamily: "var(--font-mono)" }}>{p.remaining}/{p.totalImported}</span>
-                  </div>
-                  <div style={{ height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 4 }}>
-                    <div style={{ width: `${pct}%`, height: "100%", background: p.id === "PROD-350" ? COLORS.primary : COLORS.yellow, borderRadius: 4 }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Latest orders table */}
-        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: "22px" }}>
-          <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 16 }}>Latest orders</div>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                {["Order", "Date", "Product", "Qty", "Amount", "Status"].map((h) => (
-                  <th key={h} style={{ textAlign: "left", padding: "8px 12px", fontSize: 11, color: COLORS.textMuted, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: 0.5, borderBottom: `1px solid ${COLORS.border}`, fontWeight: 500 }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {orders.slice(0, 5).map((o) => (
-                <tr key={o.id} onClick={() => { setSelectedOrder(o); setOrderDrawerOpen(true); }} style={{ cursor: "pointer" }}>
-                  <td style={{ padding: "10px 12px", fontSize: 13, color: COLORS.text, fontFamily: "var(--font-mono)" }}>{o.id}</td>
-                  <td style={{ padding: "10px 12px", fontSize: 13, color: COLORS.textSecondary }}>{o.date}</td>
-                  <td style={{ padding: "10px 12px", fontSize: 13, color: COLORS.textSecondary }}>{getProductName(o.productId).replace(" Account", "")}</td>
-                  <td style={{ padding: "10px 12px", fontSize: 13, color: COLORS.text, fontFamily: "var(--font-mono)" }}>{o.qty}</td>
-                  <td style={{ padding: "10px 12px", fontSize: 13, color: COLORS.text, fontFamily: "var(--font-mono)" }}>${o.amount}</td>
-                  <td style={{ padding: "10px 12px" }}>
-                    <span style={{ fontSize: 11, fontWeight: 500, color: statusColor[o.status], background: `${statusColor[o.status]}15`, padding: "3px 10px", borderRadius: 999 }}>{o.status}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
+  const handleNavigate = (page: Page) => {
+    setCurrentPage(page);
+    setSidebarOpen(false);
   };
 
   // ─── Products ───────────────────────────────────────────────────────────
@@ -1657,82 +1139,6 @@ export default function AdminPage() {
     );
   };
 
-  // ─── Logs ────────────────────────────────────────────────────────────────
-
-  const filteredLogs = logs.filter((l) => logFilter === "all" || l.type === logFilter);
-
-  const renderLogs = () => {
-    const filterChips: { label: string; value: string }[] = [
-      { label: "All", value: "all" },
-      { label: "Import", value: "import" },
-      { label: "Sale", value: "sale" },
-      { label: "Delivery", value: "delivery" },
-      { label: "Refund", value: "refund" },
-      { label: "Login", value: "login" },
-      { label: "Error", value: "error" },
-    ];
-
-    return (
-      <div>
-        {/* Filters + Export */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-          <div style={{ display: "flex", gap: 6 }}>
-            {filterChips.map((chip) => (
-              <button
-                key={chip.value}
-                onClick={() => setLogFilter(chip.value)}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: 999,
-                  border: `1px solid ${logFilter === chip.value ? COLORS.primary : COLORS.border}`,
-                  background: logFilter === chip.value ? "rgba(66,133,244,0.1)" : "transparent",
-                  color: logFilter === chip.value ? COLORS.primary : COLORS.textSecondary,
-                  fontSize: 12,
-                  cursor: "pointer",
-                  fontFamily: "var(--font-inter)",
-                }}
-              >{chip.label}</button>
-            ))}
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => showToast("Sales CSV exported")} style={{ padding: "7px 14px", background: "rgba(255,255,255,0.04)", border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textSecondary, fontSize: 12, cursor: "pointer", fontFamily: "var(--font-inter)" }}>Export sales CSV</button>
-            <button onClick={() => showToast("Logs CSV exported")} style={{ padding: "7px 14px", background: "rgba(255,255,255,0.04)", border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textSecondary, fontSize: 12, cursor: "pointer", fontFamily: "var(--font-inter)" }}>Export logs CSV</button>
-          </div>
-        </div>
-
-        {/* Activity feed */}
-        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: "16px 0" }}>
-          {filteredLogs.map((log, i) => (
-            <div
-              key={log.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 14,
-                padding: "12px 22px",
-                borderBottom: i < filteredLogs.length - 1 ? `1px solid ${COLORS.border}` : "none",
-              }}
-            >
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: logTypeColor[log.type], flexShrink: 0 }} />
-              <div style={{ flex: 1, fontSize: 13, color: COLORS.text }}>{log.message}</div>
-              <span style={{
-                fontSize: 10,
-                fontWeight: 500,
-                color: logTypeColor[log.type],
-                background: `${logTypeColor[log.type]}15`,
-                padding: "2px 10px",
-                borderRadius: 999,
-                fontFamily: "var(--font-mono)",
-                textTransform: "uppercase",
-                flexShrink: 0,
-              }}>{log.type}</span>
-              <span style={{ fontSize: 11, color: COLORS.textMuted, fontFamily: "var(--font-mono)", whiteSpace: "nowrap", flexShrink: 0 }}>{log.timestamp}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
 
   // ─── Drawers ─────────────────────────────────────────────────────────────
 
@@ -1968,221 +1374,48 @@ export default function AdminPage() {
     );
   };
 
-  // ─── Render Waitlist ─────────────────────────────────────────────────────
-
-  const renderWaitlist = () => {
-    // Filter waitlist entries
-    const filteredWaitlist = waitlist.filter((entry) => {
-      // Filter by status
-      if (waitlistFilter === "pending" && entry.notified) return false;
-      if (waitlistFilter === "notified" && !entry.notified) return false;
-
-      // Filter by product
-      if (waitlistProductFilter !== "all" && entry.product_id !== waitlistProductFilter) return false;
-
-      return true;
-    });
-
-    // Group by product for stats
-    const statsByProduct = waitlist.reduce((acc, entry) => {
-      if (!acc[entry.product_id]) {
-        acc[entry.product_id] = { total: 0, pending: 0, notified: 0 };
-      }
-      acc[entry.product_id].total++;
-      if (entry.notified) {
-        acc[entry.product_id].notified++;
-      } else {
-        acc[entry.product_id].pending++;
-      }
-      return acc;
-    }, {} as Record<string, { total: number; pending: number; notified: number }>);
-
-    const totalPending = Object.values(statsByProduct).reduce((sum, s) => sum + s.pending, 0);
-    const totalNotified = Object.values(statsByProduct).reduce((sum, s) => sum + s.notified, 0);
-
-    const handleNotifyAll = async (productId: string) => {
-      if (!confirm(`Notify all pending users for product ${productId}?`)) return;
-
-      const response = await fetch('/api/admin/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        showToast(`${data.data.count} users notified`);
-        loadWaitlist();
-      } else {
-        showToast(data.error || 'Failed to notify users');
-      }
-    };
-
-    const handleDeleteEntry = async (id: string) => {
-      if (!confirm('Delete this waitlist entry?')) return;
-
-      const response = await fetch(`/api/admin/waitlist?id=${id}`, {
-        method: 'DELETE',
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        showToast('Entry deleted');
-        loadWaitlist();
-      } else {
-        showToast(data.error || 'Failed to delete entry');
-      }
-    };
-
-    return (
-      <div>
-        {/* Stats Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16, marginBottom: 24 }}>
-          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "16px 20px" }}>
-            <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>Total Pending</div>
-            <div style={{ fontSize: 32, fontWeight: 600, color: COLORS.yellow }}>{totalPending}</div>
-          </div>
-          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "16px 20px" }}>
-            <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>Total Notified</div>
-            <div style={{ fontSize: 32, fontWeight: 600, color: COLORS.green }}>{totalNotified}</div>
-          </div>
-          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "16px 20px" }}>
-            <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>$350 Pending</div>
-            <div style={{ fontSize: 32, fontWeight: 600, color: COLORS.primary }}>{statsByProduct["350"]?.pending || 0}</div>
-          </div>
-          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "16px 20px" }}>
-            <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>$500 Pending</div>
-            <div style={{ fontSize: 32, fontWeight: 600, color: COLORS.primary }}>{statsByProduct["500"]?.pending || 0}</div>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-          <select value={waitlistFilter} onChange={(e) => setWaitlistFilter(e.target.value)} style={{ padding: "8px 12px", background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.text, fontSize: 13, fontFamily: "inherit", cursor: "pointer" }}>
-            <option value="all">All Status</option>
-            <option value="pending">Pending Only</option>
-            <option value="notified">Notified Only</option>
-          </select>
-          <select value={waitlistProductFilter} onChange={(e) => setWaitlistProductFilter(e.target.value)} style={{ padding: "8px 12px", background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.text, fontSize: 13, fontFamily: "inherit", cursor: "pointer" }}>
-            <option value="all">All Products</option>
-            <option value="350">$350 Account</option>
-            <option value="500">$500 Account</option>
-          </select>
-          <div style={{ flex: 1 }} />
-          {statsByProduct["350"]?.pending > 0 && (
-            <button onClick={() => handleNotifyAll("350")} style={{ padding: "8px 16px", background: COLORS.primary, border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-              Notify All $350 ({statsByProduct["350"].pending})
-            </button>
-          )}
-          {statsByProduct["500"]?.pending > 0 && (
-            <button onClick={() => handleNotifyAll("500")} style={{ padding: "8px 16px", background: COLORS.primary, border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-              Notify All $500 ({statsByProduct["500"].pending})
-            </button>
-          )}
-        </div>
-
-        {/* Waitlist Table */}
-        {filteredWaitlist.length === 0 ? (
-          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 60, textAlign: "center" }}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>🔔</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: COLORS.text, marginBottom: 8 }}>No waitlist entries</div>
-            <div style={{ fontSize: 13, color: COLORS.textMuted }}>
-              {waitlistFilter !== "all" || waitlistProductFilter !== "all"
-                ? "Try adjusting your filters"
-                : "Customers will appear here when they sign up for stock notifications"}
-            </div>
-          </div>
-        ) : (
-          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, overflow: "hidden" }}>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, fontWeight: 600, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, width: "15%" }}>Product</th>
-                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, fontWeight: 600, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, width: "20%" }}>Telegram</th>
-                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, fontWeight: 600, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, width: "20%" }}>Email</th>
-                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, fontWeight: 600, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, width: "15%" }}>Status</th>
-                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, fontWeight: 600, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, width: "15%" }}>Signed Up</th>
-                    <th style={{ padding: "12px 16px", textAlign: "right", fontSize: 12, fontWeight: 600, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, width: "15%" }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredWaitlist.map((entry) => (
-                    <tr key={entry.id} style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-                      <td style={{ padding: "14px 16px" }}>
-                        <span style={{ fontWeight: 600, color: COLORS.text }}>
-                          {entry.product_id === "350" ? "$350" : "$500"}
-                        </span>
-                      </td>
-                      <td style={{ padding: "14px 16px" }}>
-                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: COLORS.primary }}>
-                          {entry.telegram_username}
-                        </span>
-                      </td>
-                      <td style={{ padding: "14px 16px" }}>
-                        <span style={{ fontSize: 12, color: COLORS.textMuted }}>
-                          {entry.email || "—"}
-                        </span>
-                      </td>
-                      <td style={{ padding: "14px 16px" }}>
-                        {entry.notified ? (
-                          <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: 999, fontSize: 12, fontWeight: 500, background: "rgba(52,168,83,0.1)", color: COLORS.green }}>
-                            ✓ Notified
-                          </span>
-                        ) : (
-                          <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: 999, fontSize: 12, fontWeight: 500, background: "rgba(251,188,4,0.1)", color: COLORS.yellow }}>
-                            ⏳ Pending
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ padding: "14px 16px" }}>
-                        <span style={{ fontSize: 12, color: COLORS.textMuted }}>
-                          {new Date(entry.created_at).toLocaleDateString()}
-                        </span>
-                      </td>
-                      <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                        <button
-                          onClick={() => handleDeleteEntry(entry.id)}
-                          style={{
-                            padding: "6px 12px",
-                            background: "none",
-                            border: `1px solid ${COLORS.border}`,
-                            borderRadius: 6,
-                            color: COLORS.red,
-                            fontSize: 12,
-                            cursor: "pointer",
-                            fontFamily: "inherit"
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        <div style={{ marginTop: 20, fontSize: 13, color: COLORS.textMuted }}>
-          Showing {filteredWaitlist.length} of {waitlist.length} entries
-        </div>
-      </div>
-    );
-  };
-
   // ─── Page Router ─────────────────────────────────────────────────────────
 
   const renderPage = () => {
     switch (currentPage) {
-      case "dashboard": return renderDashboard();
+      case "dashboard":
+        return (
+          <DashboardPage
+            loading={loading}
+            stats={dashboardStats}
+            products={products}
+            orders={orders}
+            onNavigateInventory={() => setCurrentPage("inventory")}
+            onNavigateOrders={() => { setCurrentPage("orders"); setOrderFilter("paid"); }}
+            onSelectOrder={(o) => { setSelectedOrder(o); setOrderDrawerOpen(true); }}
+            getProductName={getProductName}
+          />
+        );
       case "products": return renderProducts();
       case "inventory": return renderInventory();
       case "orders": return renderOrders();
       case "settings": return renderSettings();
-      case "logs": return renderLogs();
-      case "waitlist": return renderWaitlist();
+      case "logs":
+        return (
+          <LogsPage
+            logs={logs}
+            logFilter={logFilter}
+            onFilterChange={setLogFilter}
+            showToast={showToast}
+          />
+        );
+      case "waitlist":
+        return (
+          <WaitlistPage
+            waitlist={waitlist}
+            waitlistFilter={waitlistFilter}
+            waitlistProductFilter={waitlistProductFilter}
+            onFilterChange={setWaitlistFilter}
+            onProductFilterChange={setWaitlistProductFilter}
+            showToast={showToast}
+            onReload={loadWaitlist}
+          />
+        );
     }
   };
 
@@ -2190,7 +1423,6 @@ export default function AdminPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, fontFamily: "var(--font-inter)" }}>
-      {/* CSS keyframes via style tag */}
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; }
@@ -2213,9 +1445,14 @@ export default function AdminPage() {
         }
       `}</style>
 
-      {renderSidebar()}
+      <Sidebar
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
+        adminEmail={adminEmail}
+        sidebarOpen={sidebarOpen}
+        onLogout={handleLogout}
+      />
 
-      {/* Mobile overlay */}
       {sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
@@ -2224,19 +1461,20 @@ export default function AdminPage() {
         />
       )}
 
-      {/* Main content */}
       <div data-main-content="" style={{ marginLeft: 248, minHeight: "100vh" }}>
-        {renderTopBar()}
+        <TopBar
+          currentPage={currentPage}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        />
         <main style={{ maxWidth: 1180, padding: 28 }}>
           {renderPage()}
         </main>
       </div>
 
-      {/* Drawers */}
       {renderProductDrawer()}
       {renderOrderDrawer()}
 
-      {/* Toast */}
       <Toast message={toast.message} visible={toast.visible} />
     </div>
   );

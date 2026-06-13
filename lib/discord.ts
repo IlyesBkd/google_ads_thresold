@@ -1,3 +1,4 @@
+import { getErrorMessage } from './errors';
 /**
  * Discord notification helper
  * Sends formatted notifications to Discord via webhook
@@ -60,9 +61,9 @@ export async function sendDiscordNotification(
     }
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Discord notification error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -80,7 +81,7 @@ export function formatSaleNotification(sale: {
   const amountUSD = (sale.amount / 100).toFixed(2);
 
   return {
-    username: 'ADSCALE Sales',
+    username: 'GADSCALE Sales',
     embeds: [
       {
         title: '🎉 New Sale!',
@@ -109,7 +110,7 @@ export function formatSaleNotification(sale: {
           },
         ],
         footer: {
-          text: 'ADSCALE Store',
+          text: 'GADSCALE Store',
         },
         timestamp: new Date().toISOString(),
       },
@@ -131,7 +132,7 @@ export function formatStockAlert(alert: {
   const color = alert.currentStock === 0 ? COLORS.ERROR : COLORS.WARNING;
 
   return {
-    username: 'ADSCALE Alerts',
+    username: 'GADSCALE Alerts',
     embeds: [
       {
         title: `${emoji} Stock Alert - ${severity}`,
@@ -157,7 +158,7 @@ export function formatStockAlert(alert: {
           },
         ],
         footer: {
-          text: 'ADSCALE Store',
+          text: 'GADSCALE Store',
         },
         timestamp: new Date().toISOString(),
       },
@@ -175,7 +176,7 @@ export function formatErrorNotification(error: {
   details?: string;
 }): DiscordMessage {
   return {
-    username: 'ADSCALE Errors',
+    username: 'GADSCALE Errors',
     embeds: [
       {
         title: '🔴 Error Occurred',
@@ -184,7 +185,7 @@ export function formatErrorNotification(error: {
         fields: [
           {
             name: '❌ Error Message',
-            value: error.message,
+            value: getErrorMessage(error),
             inline: false,
           },
           ...(error.orderId
@@ -207,7 +208,7 @@ export function formatErrorNotification(error: {
             : []),
         ],
         footer: {
-          text: 'ADSCALE Store',
+          text: 'GADSCALE Store',
         },
         timestamp: new Date().toISOString(),
       },
@@ -231,7 +232,7 @@ export function formatDailySummary(summary: {
     .join('\n');
 
   return {
-    username: 'ADSCALE Daily Report',
+    username: 'GADSCALE Daily Report',
     embeds: [
       {
         title: '📊 Daily Summary',
@@ -265,7 +266,7 @@ export function formatDailySummary(summary: {
           },
         ],
         footer: {
-          text: 'ADSCALE Store',
+          text: 'GADSCALE Store',
         },
         timestamp: new Date().toISOString(),
       },
@@ -278,7 +279,7 @@ export function formatDailySummary(summary: {
  */
 export function formatTestNotification(): DiscordMessage {
   return {
-    username: 'ADSCALE Test',
+    username: 'GADSCALE Test',
     embeds: [
       {
         title: '✅ Webhook Test Successful',
@@ -297,7 +298,7 @@ export function formatTestNotification(): DiscordMessage {
           },
         ],
         footer: {
-          text: 'ADSCALE Store',
+          text: 'GADSCALE Store',
         },
         timestamp: new Date().toISOString(),
       },

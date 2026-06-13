@@ -3,17 +3,22 @@ import bcrypt from 'bcryptjs';
 import { query } from '@/lib/db';
 import { signToken } from '@/lib/jwt';
 import { Admin } from '@/lib/types';
+import { adminLoginSchema } from '@/lib/validation';
+import { COOKIE_MAX_AGE_SECONDS } from '@/lib/constants';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
+    const body = await request.json();
+    const parsed = adminLoginSchema.safeParse(body);
 
-    if (!email || !password) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'Email and password are required' },
+        { success: false, error: 'Valid email and password are required' },
         { status: 400 }
       );
     }
+
+    const { email, password } = parsed.data;
 
     // Find admin by email
     const admins = await query<Admin>(
@@ -71,7 +76,7 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: COOKIE_MAX_AGE_SECONDS,
       path: '/',
     });
 

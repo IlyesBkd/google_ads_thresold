@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     // 6. Handle payment status
     console.log(`💳 Payment status: ${payment_status} for order ${order_id}`);
 
-    if (payment_status === 'finished' || payment_status === 'confirmed') {
+    if (payment_status === 'finished' || payment_status === 'confirmed' || payment_status === 'sending') {
       // Payment confirmed! Update order and deliver
 
       // Update order status
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
     } else if (
       payment_status === 'waiting' ||
       payment_status === 'confirming' ||
-      payment_status === 'sending'
+      payment_status === 'partially_paid'
     ) {
       // Payment in progress - just log it
 
@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
         message: 'Unknown status logged',
       });
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('❌ Webhook error:', error);
 
     // Return 200 to avoid NOWPayments retries (already logged)

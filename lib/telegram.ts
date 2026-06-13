@@ -1,3 +1,4 @@
+import { getErrorMessage } from './errors';
 /**
  * Telegram notification helper
  * Sends messages to users via Telegram Bot API
@@ -47,9 +48,9 @@ export async function sendTelegramMessage(
     // });
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Telegram notification error:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 

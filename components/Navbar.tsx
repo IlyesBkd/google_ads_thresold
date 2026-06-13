@@ -42,7 +42,7 @@ export default function Navbar({ showNavLinks }: { showNavLinks: boolean }) {
               color: "#F5F5F5",
             }}
           >
-            ADSCALE
+            GADSCALE
           </span>
         </a>
 

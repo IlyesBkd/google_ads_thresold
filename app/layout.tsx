@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import TelegramWidget from "@/components/TelegramWidget";
+import FloatingLogos from "@/components/FloatingLogos";
 
 const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-inter",
   display: "swap",
+  preload: true,
+  fallback: ["system-ui", "sans-serif"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -15,12 +18,14 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500"],
   variable: "--font-mono",
   display: "swap",
+  preload: true,
+  fallback: ["Menlo", "Consolas", "monospace"],
 });
 
 export const metadata: Metadata = {
-  title: "ADSCALE — Google Ads threshold accounts, delivered instantly",
+  title: "GADSCALE — Google Ads Threshold Accounts from $50 | Instant Delivery",
   description:
-    "Aged, fully verified Google Ads accounts with the billing threshold already unlocked — spend before you pay Google. Instant .txt delivery, crypto accepted, replacement warranty.",
+    "Ready-to-use Google Ads accounts with the billing threshold already unlocked. Run ads now, pay later. All accounts eligible for the €400 free credit promo. From $50, crypto accepted.",
 };
 
 export default function RootLayout({
@@ -31,6 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body>
+        <FloatingLogos />
         {children}
         <TelegramWidget />
       </body>
