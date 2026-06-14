@@ -153,14 +153,6 @@ export default function CheckoutModal({
     return () => modal.removeEventListener("keydown", handleTab);
   }, [step]);
 
-  // Escape key closes modal
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
 
   // Load saved email from localStorage
   useEffect(() => {
@@ -219,9 +211,9 @@ export default function CheckoutModal({
     return () => clearInterval(interval);
   }, [paymentData]);
 
-  // Poll for payment confirmation in waiting step
+  // Poll for payment confirmation in payment or waiting step
   useEffect(() => {
-    if (step !== "waiting" || !paymentData) return;
+    if ((step !== "waiting" && step !== "payment") || !paymentData) return;
 
     const pollInterval = setInterval(async () => {
       try {
@@ -403,7 +395,6 @@ export default function CheckoutModal({
 
   return (
     <div
-      onClick={onClose}
       className="anim-overlay-in"
       role="dialog"
       aria-modal="true"
