@@ -4,10 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import type { PayMethod, Product } from "@/lib/data";
 import { QRCodeSVG } from "qrcode.react";
 
-const COIN_INFO: Record<PayMethod, { name: string; color: string }> = {
-  BTC: { name: "Bitcoin", color: "#F7931A" },
-  ETH: { name: "Ethereum", color: "#627EEA" },
-  USDT: { name: "Tether", color: "#26A17B" },
+const COIN_INFO: Record<PayMethod, { name: string; color: string; network: string }> = {
+  BTC: { name: "Bitcoin", color: "#F7931A", network: "BTC" },
+  ETH: { name: "Ethereum", color: "#627EEA", network: "ERC-20" },
+  USDT: { name: "Tether", color: "#26A17B", network: "TRC-20" },
 };
 
 function CryptoIcon({ method, size = 28 }: { method: PayMethod; size?: number }) {
@@ -750,7 +750,7 @@ export default function CheckoutModal({
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <CryptoIcon method={payMethod} size={34} />
                 <div style={{ display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontSize: "14px", fontWeight: 600, color: "#F5F5F5" }}>Pay with {COIN_INFO[payMethod].name}</span>
+                  <span style={{ fontSize: "14px", fontWeight: 600, color: "#F5F5F5" }}>Pay with {COIN_INFO[payMethod].name} <span style={{ fontSize: "11px", color: "#9A9A9A", fontWeight: 400 }}>({COIN_INFO[payMethod].network})</span></span>
                   <span style={{ fontSize: "11.5px", color: "#6A6A6A" }}>Send the exact amount below</span>
                 </div>
               </div>
@@ -814,7 +814,7 @@ export default function CheckoutModal({
 
             {/* Address */}
             <div style={{ marginTop: "12px" }}>
-              <div style={{ fontSize: "11px", color: "#9A9A9A", letterSpacing: "0.04em", marginBottom: "7px", textTransform: "uppercase" }}>{COIN_INFO[payMethod].name} address</div>
+              <div style={{ fontSize: "11px", color: "#9A9A9A", letterSpacing: "0.04em", marginBottom: "7px", textTransform: "uppercase" }}>{COIN_INFO[payMethod].name} address <span style={{ color: "#F7931A", fontWeight: 600 }}>({COIN_INFO[payMethod].network})</span></div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "13px 14px", background: "#080808", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px" }}>
                 <code style={{ fontFamily: "var(--font-mono), monospace", fontSize: "12px", color: "#C5C5C5", wordBreak: "break-all", flex: 1, lineHeight: 1.5 }}>
                   {paymentData.payAddress}
