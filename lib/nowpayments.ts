@@ -2,13 +2,22 @@ import { getLiveCryptoRates } from './crypto-rates';
 import { getErrorMessage } from './errors';
 import crypto from 'crypto';
 
-const NOWPAYMENTS_API_KEY = process.env.CRYPTO_GATEWAY_API_KEY;
-const USE_SANDBOX = process.env.NOWPAYMENTS_SANDBOX === 'true';
-const NOWPAYMENTS_API_URL = USE_SANDBOX
-  ? 'https://api-sandbox.nowpayments.io/v1'
-  : 'https://api.nowpayments.io/v1';
-const USE_MOCK = process.env.NODE_ENV !== 'production' &&
-  (!NOWPAYMENTS_API_KEY || NOWPAYMENTS_API_KEY === 'your-crypto-gateway-api-key');
+function getApiKey() {
+  return process.env.CRYPTO_GATEWAY_API_KEY;
+}
+
+function getApiUrl() {
+  const useSandbox = process.env.NOWPAYMENTS_SANDBOX === 'true';
+  return useSandbox
+    ? 'https://api-sandbox.nowpayments.io/v1'
+    : 'https://api.nowpayments.io/v1';
+}
+
+function isMockMode() {
+  const key = getApiKey();
+  return process.env.NODE_ENV !== 'production' &&
+    (!key || key === 'your-crypto-gateway-api-key');
+}
 
 // NOWPayments uses lowercase currency codes with network suffix
 const CURRENCY_MAP: Record<string, string> = {
@@ -48,18 +57,26 @@ interface PaymentResponse {
 export async function createPayment(
   params: CreatePaymentParams
 ): Promise<{ success: boolean; data?: PaymentResponse; error?: string }> {
-  if (USE_MOCK) {
+  if (isMockMode()) {
     return createMockPayment(params);
   }
 
   try {
+    const apiKey = getApiKey();
+    const apiUrl = getApiUrl();
+    const useSandbox = process.env.NOWPAYMENTS_SANDBOX === 'true';
+
+    if (!apiKey) {
+      return { success: false, error: 'CRYPTO_GATEWAY_API_KEY not configured' };
+    }
+
     const payCurrency = mapCurrencyToNowPayments(params.payCurrency);
 
-    const response = await fetch(`${NOWPAYMENTS_API_URL}/payment`, {
+    const response = await fetch(`${apiUrl}/payment`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': NOWPAYMENTS_API_KEY!,
+        'x-api-key': apiKey,
       },
       body: JSON.stringify({
         price_amount: params.priceAmount,
@@ -68,7 +85,7 @@ export async function createPayment(
         order_id: params.orderId,
         order_description: params.orderDescription,
         ipn_callback_url: params.ipnCallbackUrl,
-        ...(USE_SANDBOX && { case: 'success' }),
+        ...(useSandbox && { case: 'success' }),
       }),
     });
 
@@ -105,14 +122,21 @@ export async function createPayment(
 export async function getPaymentStatus(
   paymentId: string
 ): Promise<{ success: boolean; status?: string; error?: string }> {
-  if (USE_MOCK) {
+  if (isMockMode()) {
     return { success: true, status: 'finished' };
   }
 
   try {
-    const response = await fetch(`${NOWPAYMENTS_API_URL}/payment/${paymentId}`, {
+    const apiKey = getApiKey();
+    const apiUrl = getApiUrl();
+
+    if (!apiKey) {
+      return { success: false, error: 'CRYPTO_GATEWAY_API_KEY not configured' };
+    }
+
+    const response = await fetch(`${apiUrl}/payment/${paymentId}`, {
       headers: {
-        'x-api-key': NOWPAYMENTS_API_KEY!,
+        'x-api-key': apiKey,
       },
     });
 
@@ -138,7 +162,7 @@ export function verifyWebhookSignature(
   rawBody: string,
   signature: string
 ): boolean {
-  if (USE_MOCK) {
+  if (isMockMode()) {
     return true;
   }
 
@@ -230,7 +254,7 @@ export async function simulatePaymentConfirmation(
   paymentId: string,
   orderId: string
 ): Promise<void> {
-  if (!USE_MOCK) {
+  if (!isMockMode()) {
     throw new Error('simulatePaymentConfirmation is only available in mock mode');
   }
 
