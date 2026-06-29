@@ -47,7 +47,13 @@ export async function GET(
  * Generate formatted .txt file content
  */
 function generateCredentialsTxt(
-  credentials: Array<{ email: string; password: string }>,
+  credentials: Array<{
+    email: string;
+    password: string;
+    totp_secret?: string | null;
+    recovery_email?: string | null;
+    proxy?: string | null;
+  }>,
   orderId: string,
   productName: string
 ): string {
@@ -72,8 +78,17 @@ QUANTITY: ${credentials.length}
 ───────────────────────────────────────────────────────────────────────
 Email:    ${cred.email}
 Password: ${cred.password}
-
 `;
+    if (cred.totp_secret) {
+      content += `2FA Secret: ${cred.totp_secret}\n`;
+    }
+    if (cred.recovery_email) {
+      content += `Recovery Email: ${cred.recovery_email}\n`;
+    }
+    if (cred.proxy) {
+      content += `Proxy: ${cred.proxy}\n`;
+    }
+    content += `\n`;
   });
 
   content += `═══════════════════════════════════════════════════════════════════════

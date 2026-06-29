@@ -153,7 +153,13 @@ export async function getCredentialsForToken(
 ): Promise<{
   success: boolean;
   error?: string;
-  credentials?: Array<{ email: string; password: string }>;
+  credentials?: Array<{
+    email: string;
+    password: string;
+    totp_secret: string | null;
+    recovery_email: string | null;
+    proxy: string | null;
+  }>;
   orderId?: string;
   productName?: string;
 }> {
@@ -190,7 +196,7 @@ export async function getCredentialsForToken(
     }
 
     const credentials = await query<StockItem>(
-      `SELECT email, password FROM stock_items
+      `SELECT email, password, totp_secret, recovery_email, proxy FROM stock_items
        WHERE order_id = $1 AND status = 'sold'`,
       [tokenData.order_id]
     );
@@ -208,6 +214,9 @@ export async function getCredentialsForToken(
       credentials: credentials.map((c) => ({
         email: c.email,
         password: c.password,
+        totp_secret: c.totp_secret,
+        recovery_email: c.recovery_email,
+        proxy: c.proxy,
       })),
       orderId: order.id,
       productName: order.product_name,

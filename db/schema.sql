@@ -44,8 +44,11 @@ CREATE TABLE products (
 CREATE TABLE stock_items (
   id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   product_id  TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-  email       TEXT NOT NULL,                         -- Google Ads account email
-  password    TEXT NOT NULL,                         -- Account password
+  email          TEXT NOT NULL,                      -- Google Ads account email
+  password       TEXT NOT NULL,                      -- Account password
+  totp_secret    TEXT,                               -- Google Authenticator / 2FA secret (optional)
+  recovery_email TEXT,                               -- Account recovery email (optional)
+  proxy          TEXT,                               -- Proxy ip:port:user:pass (optional)
   status      stock_status NOT NULL DEFAULT 'available',
   order_id    TEXT,                                  -- Linked when sold
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),

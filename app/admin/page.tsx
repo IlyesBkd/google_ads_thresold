@@ -623,7 +623,7 @@ export default function AdminPage() {
   };
 
   const handleImport = async () => {
-    const lines = importText.trim().split("\n").filter((l) => l.includes(":"));
+    const lines = importText.trim().split("\n").map((l) => l.trim()).filter((l) => l.includes("|") || l.includes(":"));
     if (lines.length === 0) {
       showToast("No valid credentials found");
       return;
@@ -732,11 +732,11 @@ export default function AdminPage() {
             </select>
           </div>
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 6, display: "block" }}>Paste credentials (one email:password per line)</label>
+            <label style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 6, display: "block" }}>Paste credentials — one per line: email|password|2FA secret|recovery email|proxy (last three optional)</label>
             <textarea
               value={importText}
               onChange={(e) => setImportText(e.target.value)}
-              placeholder={"example@gmail.com:password123\nanother@gmail.com:securepass"}
+              placeholder={"email@gmail.com|password|TOTP_SECRET|recovery@mail.com|ip:port:user:pass\nemail2@gmail.com|password2"}
               style={{
                 width: "100%",
                 minHeight: 80,

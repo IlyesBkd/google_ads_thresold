@@ -78,24 +78,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse credentials (multi-line "email:password")
+    // Parse credentials. Preferred format is pipe-delimited so optional fields
+    // (the proxy in particular) can themselves contain colons:
+    //   email|password|totp_secret|recovery_email|proxy
+    // The last three fields are optional. For backward compatibility a line
+    // without a pipe is still treated as the legacy "email:password" format.
     const lines = credentials.split('\n').map((line: string) => line.trim()).filter(Boolean);
 
-    const toImport: Array<{ email: string; password: string }> = [];
+    const toImport: Array<{
+      email: string;
+      password: string;
+      totpSecret: string | null;
+      recoveryEmail: string | null;
+      proxy: string | null;
+    }> = [];
     const errors: string[] = [];
     let lineNumber = 0;
 
     for (const line of lines) {
       lineNumber++;
-      const parts = line.split(':');
 
-      if (parts.length < 2) {
-        errors.push(`Line ${lineNumber}: Invalid format (expected email:password)`);
-        continue;
+      let email: string;
+      let password: string;
+      let totpSecret: string | null = null;
+      let recoveryEmail: string | null = null;
+      let proxy: string | null = null;
+
+      if (line.includes('|')) {
+        const parts = line.split('|').map((p: string) => p.trim());
+
+        if (parts.length < 2) {
+          errors.push(`Line ${lineNumber}: Invalid format (expected email|password|totp|recovery|proxy)`);
+          continue;
+        }
+
+        email = parts[0];
+        password = parts[1];
+        totpSecret = parts[2] || null;
+        recoveryEmail = parts[3] || null;
+        proxy = parts[4] || null;
+      } else {
+        // Legacy "email:password" (password may contain colons)
+        const idx = line.indexOf(':');
+
+        if (idx === -1) {
+          errors.push(`Line ${lineNumber}: Invalid format (expected email|password|totp|recovery|proxy)`);
+          continue;
+        }
+
+        email = line.slice(0, idx).trim();
+        password = line.slice(idx + 1).trim();
       }
-
-      const email = parts[0].trim();
-      const password = parts.slice(1).join(':').trim(); // Handle passwords with colons
 
       if (!email || !password) {
         errors.push(`Line ${lineNumber}: Email or password is empty`);
@@ -108,7 +141,7 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      toImport.push({ email, password });
+      toImport.push({ email, password, totpSecret, recoveryEmail, proxy });
     }
 
     if (toImport.length === 0) {
@@ -135,9 +168,9 @@ export async function POST(request: NextRequest) {
     for (const item of newItems) {
       try {
         await execute(
-          `INSERT INTO stock_items (product_id, email, password, status)
-           VALUES ($1, $2, $3, $4)`,
-          [productId, item.email, item.password, 'available']
+          `INSERT INTO stock_items (product_id, email, password, totp_secret, recovery_email, proxy, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [productId, item.email, item.password, item.totpSecret, item.recoveryEmail, item.proxy, 'available']
         );
         addedCount++;
       } catch (err) {

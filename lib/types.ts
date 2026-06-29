@@ -25,6 +25,9 @@ export interface StockItem {
   product_id: string;
   email: string;
   password: string;
+  totp_secret: string | null;
+  recovery_email: string | null;
+  proxy: string | null;
   status: StockStatus;
   order_id: string | null;
   created_at: Date;
