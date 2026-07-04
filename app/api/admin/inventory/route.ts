@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
     let addedCount = 0;
     for (const item of newItems) {
       // Determine dates
-      const createdDate = item.googleAdsCreatedAt || googleAdsCreatedAt || null;
+      const createdDate = googleAdsCreatedAt || null;
       let expiresDate = null;
       if (createdDate) {
         const d = new Date(createdDate);
