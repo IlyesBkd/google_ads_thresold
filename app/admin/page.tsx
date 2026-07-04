@@ -68,6 +68,7 @@ export default function AdminPage() {
   const [inventoryFilter, setInventoryFilter] = useState<string>("all");
   const [importProduct, setImportProduct] = useState<string>("");
   const [importText, setImportText] = useState("");
+  const [importDate, setImportDate] = useState("");
 
   // Filters
   const [orderFilter, setOrderFilter] = useState<string>("all");
@@ -142,6 +143,8 @@ export default function AdminPage() {
         status: c.status,
         dateAdded: c.date_added || c.dateAdded || new Date(c.created_at).toLocaleDateString(),
         orderId: c.order_id || c.orderId || null,
+        googleAdsCreatedAt: c.google_ads_created_at || c.googleAdsCreatedAt || null,
+        promoExpiresAt: c.promo_expires_at || c.promoExpiresAt || null,
       }));
       setCredentials(mappedCredentials);
     } else {
@@ -630,7 +633,7 @@ export default function AdminPage() {
     }
 
     setLoading(true);
-    const response = await api.importCredentials(importProduct, importText.trim());
+    const response = await api.importCredentials(importProduct, importText.trim(), importDate || undefined);
 
     if (response.success && response.data) {
       const data = response.data as any;
@@ -753,6 +756,27 @@ export default function AdminPage() {
             />
           </div>
         </div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14 }}>
+          <div>
+            <label style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 6, display: "block" }}>Google Ads creation date (optional)</label>
+            <input
+              type="date"
+              value={importDate}
+              onChange={(e) => setImportDate(e.target.value)}
+              style={{
+                padding: "10px 14px",
+                background: "#111",
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: 8,
+                color: COLORS.text,
+                fontSize: 13,
+                fontFamily: "var(--font-inter)",
+                outline: "none",
+              }}
+            />
+          </div>
+          <div style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 20 }}>If set, promo expires 60 days after this date</div>
+        </div>
         <div style={{ display: "flex", gap: 10 }}>
           <label style={{
             padding: "10px 20px",
@@ -791,7 +815,7 @@ export default function AdminPage() {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              {["Credential", "Product", "Status", "Date added", "Order ID"].map((h) => (
+              {["Credential", "Product", "Status", "Date added", "Promo expires", "Order ID"].map((h) => (
                 <th key={h} style={{ textAlign: "left", padding: "12px 16px", fontSize: 11, color: COLORS.textMuted, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: 0.5, borderBottom: `1px solid ${COLORS.border}`, fontWeight: 500 }}>{h}</th>
               ))}
             </tr>
@@ -807,6 +831,14 @@ export default function AdminPage() {
                   <span style={{ fontSize: 11, fontWeight: 500, color: credentialStatusColor[cred.status], background: `${credentialStatusColor[cred.status]}15`, padding: "3px 10px", borderRadius: 999 }}>{cred.status}</span>
                 </td>
                 <td style={{ padding: "12px 16px", fontSize: 12, color: COLORS.textSecondary, fontFamily: "var(--font-mono)" }}>{cred.dateAdded}</td>
+                <td style={{ padding: "12px 16px", fontSize: 12, fontFamily: "var(--font-mono)" }}>
+                  {cred.promoExpiresAt ? (() => {
+                    const expires = new Date(cred.promoExpiresAt);
+                    const daysLeft = Math.ceil((expires.getTime() - Date.now()) / (1000*60*60*24));
+                    const color = daysLeft < 7 ? COLORS.red : daysLeft < 20 ? COLORS.yellow : COLORS.green;
+                    return <span style={{ color }}>{expires.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}<span style={{ color: COLORS.textMuted, marginLeft: 4 }}>({daysLeft}d)</span></span>;
+                  })() : <span style={{ color: COLORS.textMuted }}>—</span>}
+                </td>
                 <td style={{ padding: "12px 16px", fontSize: 12, color: cred.orderId ? COLORS.primary : COLORS.textMuted, fontFamily: "var(--font-mono)" }}>{cred.orderId || "—"}</td>
               </tr>
             ))}

@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     const admin = await requireAuth(request);
 
     const body = await request.json();
-    const { productId, credentials } = body;
+    const { productId, credentials, googleAdsCreatedAt } = body;
 
     if (!productId || !credentials) {
       return NextResponse.json(
@@ -166,11 +166,20 @@ export async function POST(request: NextRequest) {
     // Insert valid new items
     let addedCount = 0;
     for (const item of newItems) {
+      // Determine dates
+      const createdDate = item.googleAdsCreatedAt || googleAdsCreatedAt || null;
+      let expiresDate = null;
+      if (createdDate) {
+        const d = new Date(createdDate);
+        d.setDate(d.getDate() + 60);
+        expiresDate = d.toISOString().split('T')[0];
+      }
+
       try {
         await execute(
-          `INSERT INTO stock_items (product_id, email, password, totp_secret, recovery_email, proxy, status)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [productId, item.email, item.password, item.totpSecret, item.recoveryEmail, item.proxy, 'available']
+          `INSERT INTO stock_items (product_id, email, password, totp_secret, recovery_email, proxy, status, google_ads_created_at, promo_expires_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [productId, item.email, item.password, item.totpSecret, item.recoveryEmail, item.proxy, 'available', createdDate, expiresDate]
         );
         addedCount++;
       } catch (err) {
