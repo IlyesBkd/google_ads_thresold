@@ -216,3 +216,82 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    // Verify authentication and check role
+    const admin = await requireAuth(request);
+
+    if (admin.role !== 'owner' && admin.role !== 'manager') {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: Only owner or manager can delete stock items' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const ids: string[] = Array.isArray(body.ids)
+      ? body.ids
+      : body.id
+        ? [body.id]
+        : [];
+
+    if (ids.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Stock item ID(s) required' },
+        { status: 400 }
+      );
+    }
+
+    // Only available/error items can be removed. Sold and reserved items are kept
+    // because delivery re-reads them when a customer reuses a download link.
+    const deleted = await query<{ id: string; email: string; product_id: string }>(
+      `DELETE FROM stock_items
+       WHERE id = ANY($1::text[])
+         AND status IN ('available', 'error')
+       RETURNING id, email, product_id`,
+      [ids]
+    );
+
+    const skipped = ids.length - deleted.length;
+
+    if (deleted.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Cannot delete sold or reserved accounts' },
+        { status: 409 }
+      );
+    }
+
+    await query(
+      'INSERT INTO logs (type, message, admin_id) VALUES ($1, $2, $3)',
+      [
+        'import',
+        `${deleted.length} stock item(s) deleted by ${admin.email}${skipped > 0 ? ` — ${skipped} skipped (sold/reserved)` : ''}`,
+        admin.adminId,
+      ]
+    );
+
+    // Removing stock can drop a product below its threshold (no await - fire and forget)
+    const affectedProducts = [...new Set(deleted.map((item) => item.product_id))];
+    for (const productId of affectedProducts) {
+      checkAndAlertStock(productId).catch((err) => console.error('Stock alert error:', err));
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        deleted: deleted.length,
+        skipped,
+      },
+    });
+  } catch (error) {
+    console.error('Delete stock items error:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    const status = message.includes('Unauthorized') ? 401 : message.includes('Forbidden') ? 403 : 500;
+
+    return NextResponse.json(
+      { success: false, error: message },
+      { status }
+    );
+  }
+}

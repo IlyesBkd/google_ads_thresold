@@ -121,6 +121,13 @@ class ApiClient {
     });
   }
 
+  async deleteCredentials(ids: string[]) {
+    return this.request('/inventory', {
+      method: 'DELETE',
+      body: JSON.stringify({ ids }),
+    });
+  }
+
   // ─── Orders ───────────────────────────────────────────────────────────────
 
   async getOrders(params?: {

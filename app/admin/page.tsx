@@ -68,6 +68,7 @@ export default function AdminPage() {
   const [inventoryFilter, setInventoryFilter] = useState<string>("all");
   const [importProduct, setImportProduct] = useState<string>("");
   const [importText, setImportText] = useState("");
+  const [selectedCredentials, setSelectedCredentials] = useState<string[]>([]);
 
   // Filters
   const [orderFilter, setOrderFilter] = useState<string>("all");
@@ -657,6 +658,32 @@ export default function AdminPage() {
     e.target.value = "";
   };
 
+  // Sold and reserved accounts stay in stock: delivery re-reads them when a
+  // customer reuses their download link.
+  const isDeletable = (status: string) => status === "available" || status === "error";
+
+  const handleDeleteCredentials = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    const label = ids.length === 1 ? "this account" : `${ids.length} accounts`;
+    if (!confirm(`Delete ${label} from inventory? This cannot be undone.`)) return;
+
+    setLoading(true);
+    const response = await api.deleteCredentials(ids);
+
+    if (response.success && response.data) {
+      const { deleted, skipped } = response.data as { deleted: number; skipped: number };
+      showToast(skipped > 0
+        ? `${deleted} deleted, ${skipped} skipped (sold/reserved)`
+        : `${deleted} account${deleted > 1 ? "s" : ""} deleted`);
+      setSelectedCredentials([]);
+      await loadInventory();
+      await loadProducts();
+    } else {
+      showToast(response.error || "Failed to delete accounts");
+    }
+    setLoading(false);
+  };
+
   const renderInventory = () => {
     const filterTabs = [
       { label: "All", value: "all" },
@@ -666,6 +693,20 @@ export default function AdminPage() {
       }))
     ];
 
+    const deletableIds = filteredCredentials.filter((c) => isDeletable(c.status)).map((c) => c.id);
+
+    const inventoryHeaderStyle: React.CSSProperties = {
+      textAlign: "left",
+      padding: "12px 16px",
+      fontSize: 11,
+      color: COLORS.textMuted,
+      fontFamily: "var(--font-mono)",
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+      borderBottom: `1px solid ${COLORS.border}`,
+      fontWeight: 500,
+    };
+
     return (
       <div>
         {/* Filter tabs */}
@@ -673,7 +714,7 @@ export default function AdminPage() {
           {filterTabs.map((tab) => (
           <button
             key={tab.value}
-            onClick={() => setInventoryFilter(tab.value)}
+            onClick={() => { setInventoryFilter(tab.value); setSelectedCredentials([]); }}
             style={{
               padding: "8px 18px",
               borderRadius: 999,
@@ -786,19 +827,55 @@ export default function AdminPage() {
         </div>
       </div>
 
+      {/* Bulk actions */}
+      {selectedCredentials.length > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+          <span style={{ fontSize: 12, color: COLORS.textSecondary }}>{selectedCredentials.length} selected</span>
+          <button
+            onClick={() => handleDeleteCredentials(selectedCredentials)}
+            disabled={loading}
+            style={{ padding: "6px 12px", background: "rgba(234,67,53,0.08)", border: `1px solid rgba(234,67,53,0.2)`, borderRadius: 8, color: COLORS.red, fontSize: 12, cursor: loading ? "not-allowed" : "pointer", fontFamily: "var(--font-inter)", opacity: loading ? 0.6 : 1 }}
+          >Delete selected ({selectedCredentials.length})</button>
+          <button
+            onClick={() => setSelectedCredentials([])}
+            style={{ padding: "6px 12px", background: "transparent", border: "none", color: COLORS.textMuted, fontSize: 12, cursor: "pointer", fontFamily: "var(--font-inter)" }}
+          >Clear</button>
+        </div>
+      )}
+
       {/* Stock table */}
       <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              {["Credential", "Product", "Status", "Date added", "Order ID"].map((h) => (
-                <th key={h} style={{ textAlign: "left", padding: "12px 16px", fontSize: 11, color: COLORS.textMuted, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: 0.5, borderBottom: `1px solid ${COLORS.border}`, fontWeight: 500 }}>{h}</th>
+              <th style={{ ...inventoryHeaderStyle, width: 40 }}>
+                <input
+                  type="checkbox"
+                  checked={deletableIds.length > 0 && selectedCredentials.length === deletableIds.length}
+                  onChange={(e) => setSelectedCredentials(e.target.checked ? deletableIds : [])}
+                  disabled={deletableIds.length === 0}
+                  style={{ cursor: deletableIds.length === 0 ? "not-allowed" : "pointer" }}
+                />
+              </th>
+              {["Credential", "Product", "Status", "Date added", "Order ID", "Actions"].map((h) => (
+                <th key={h} style={inventoryHeaderStyle}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filteredCredentials.map((cred) => (
               <tr key={cred.id} style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+                <td style={{ padding: "12px 16px" }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedCredentials.includes(cred.id)}
+                    disabled={!isDeletable(cred.status)}
+                    onChange={(e) => setSelectedCredentials((prev) =>
+                      e.target.checked ? [...prev, cred.id] : prev.filter((id) => id !== cred.id)
+                    )}
+                    style={{ cursor: isDeletable(cred.status) ? "pointer" : "not-allowed" }}
+                  />
+                </td>
                 <td style={{ padding: "12px 16px", fontSize: 12, color: COLORS.text, fontFamily: "var(--font-mono)" }}>
                   {maskEmail(cred.email)}:{"••••••"}
                 </td>
@@ -808,6 +885,16 @@ export default function AdminPage() {
                 </td>
                 <td style={{ padding: "12px 16px", fontSize: 12, color: COLORS.textSecondary, fontFamily: "var(--font-mono)" }}>{cred.dateAdded}</td>
                 <td style={{ padding: "12px 16px", fontSize: 12, color: cred.orderId ? COLORS.primary : COLORS.textMuted, fontFamily: "var(--font-mono)" }}>{cred.orderId || "—"}</td>
+                <td style={{ padding: "12px 16px" }}>
+                  {isDeletable(cred.status) ? (
+                    <button
+                      onClick={() => handleDeleteCredentials([cred.id])}
+                      style={{ padding: "6px 12px", background: "rgba(234,67,53,0.08)", border: `1px solid rgba(234,67,53,0.2)`, borderRadius: 8, color: COLORS.red, fontSize: 12, cursor: "pointer", fontFamily: "var(--font-inter)" }}
+                    >Delete</button>
+                  ) : (
+                    <span style={{ fontSize: 12, color: COLORS.textMuted }}>—</span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

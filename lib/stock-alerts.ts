@@ -3,7 +3,7 @@
  */
 
 import { query } from './db';
-import { notifyStockAlert } from './discord';
+import { notifyStockAlert, getDiscordWebhookUrl } from './discord';
 
 interface StockCheck {
   productId: string;
@@ -17,17 +17,8 @@ interface StockCheck {
  */
 export async function checkAndAlertStock(productId?: string): Promise<void> {
   try {
-    // Get Discord webhook URL
-    const settings = await query<{ key: string; value: string }>(
-      "SELECT key, value FROM settings WHERE key = 'discord_webhook_url'",
-      []
-    );
-    const webhookUrl = settings[0]?.value;
-
-    if (!webhookUrl) {
-      // No webhook configured, skip alerts
-      return;
-    }
+    // Same resolution as sale notifications (Settings → env → hardcoded)
+    const webhookUrl = await getDiscordWebhookUrl();
 
     // Get products to check
     const productsToCheck = productId

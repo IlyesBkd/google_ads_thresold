@@ -1,8 +1,35 @@
 import { getErrorMessage } from './errors';
+import { query } from './db';
 /**
  * Discord notification helper
  * Sends formatted notifications to Discord via webhook
  */
+
+/**
+ * Hardcoded fallback webhook so notifications work without any dashboard setup.
+ * A URL saved in Settings (or DISCORD_WEBHOOK_URL) takes precedence over it.
+ */
+const FALLBACK_WEBHOOK_URL =
+  'https://discord.com/api/webhooks/1525246168228036821/uwQYA6n-din9DZtHZSWNBtMXZe20x1Cjv_U2yYqdzp-mQ169Vor-r5ZPd6bHpDKFEpHJ';
+
+/**
+ * Resolve the webhook to notify: Settings → env → hardcoded fallback.
+ * Never throws — a DB hiccup must not silence notifications.
+ */
+export async function getDiscordWebhookUrl(): Promise<string> {
+  try {
+    const settings = await query<{ value: string }>(
+      "SELECT value FROM settings WHERE key = 'discord_webhook_url'",
+      []
+    );
+    const configured = settings[0]?.value?.trim();
+    if (configured) return configured;
+  } catch (error) {
+    console.error('Failed to read Discord webhook setting:', error);
+  }
+
+  return process.env.DISCORD_WEBHOOK_URL?.trim() || FALLBACK_WEBHOOK_URL;
+}
 
 const COLORS = {
   SUCCESS: 0x34a853, // Green

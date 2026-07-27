@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { queryOne, execute, query } from '@/lib/db';
+import { queryOne, execute } from '@/lib/db';
 import { verifyWebhookSignature } from '@/lib/nowpayments';
 import { deliverOrder } from '@/lib/delivery';
-import { notifySale } from '@/lib/discord';
+import { notifySale, getDiscordWebhookUrl } from '@/lib/discord';
 import { checkAndAlertStock } from '@/lib/stock-alerts';
 import { Order } from '@/lib/types';
 
@@ -92,6 +92,29 @@ export async function POST(request: NextRequest) {
         ]
       );
 
+      // Announce the sale as soon as payment is confirmed. This runs before
+      // delivery so a paid order still gets reported when delivery fails.
+      try {
+        const product = await queryOne<{ name: string }>(
+          'SELECT name FROM products WHERE id = $1',
+          [order.product_id]
+        );
+
+        await notifySale(await getDiscordWebhookUrl(), {
+          orderId: order_id,
+          productName: product?.name || `Product ${order.product_id}`,
+          quantity: order.quantity,
+          amount: order.amount,
+          coin: order.coin,
+          customerEmail: order.customer_email,
+        });
+
+        console.log('📢 Discord sale notification sent');
+      } catch (error) {
+        console.error('Discord notification error:', error);
+        // Don't fail the webhook if Discord fails
+      }
+
       // Trigger automatic delivery
       console.log(`📤 Triggering automatic delivery for ${order_id}...`);
 
@@ -102,37 +125,11 @@ export async function POST(request: NextRequest) {
         console.log(`   Credentials: ${deliveryResult.deliveredCount}`);
         console.log(`   Token: ${deliveryResult.downloadToken}`);
 
-        // Send Discord notification
+        // Check stock levels and alert if low
         try {
-          const settings = await query<{ key: string; value: string }>(
-            "SELECT key, value FROM settings WHERE key = 'discord_webhook_url'",
-            []
-          );
-          const webhookUrl = settings[0]?.value;
-
-          if (webhookUrl) {
-            const product = await queryOne<{ name: string }>(
-              'SELECT name FROM products WHERE id = $1',
-              [order.product_id]
-            );
-
-            await notifySale(webhookUrl, {
-              orderId: order_id,
-              productName: product?.name || `Product ${order.product_id}`,
-              quantity: order.quantity,
-              amount: order.amount,
-              coin: order.coin,
-              customerEmail: order.customer_email,
-            });
-
-            console.log('📢 Discord notification sent');
-          }
-
-          // Check stock levels and alert if low
           await checkAndAlertStock(order.product_id);
         } catch (error) {
-          console.error('Discord notification error:', error);
-          // Don't fail the webhook if Discord fails
+          console.error('Stock alert error:', error);
         }
       } else {
         console.error(`❌ Delivery failed for ${order_id}: ${deliveryResult.error}`);

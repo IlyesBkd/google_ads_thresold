@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/jwt';
 import { query, execute } from '@/lib/db';
 import { OrderWithDetails, OrderStatus } from '@/lib/types';
+import { notifySale, getDiscordWebhookUrl } from '@/lib/discord';
 
 export async function GET(request: NextRequest) {
   try {
@@ -108,8 +109,16 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Get order details
-    const orderResult = await query<{ id: string; quantity: number; product_id: string; status: OrderStatus }>(
-      'SELECT id, quantity, product_id, status FROM orders WHERE id = $1',
+    const orderResult = await query<{
+      id: string;
+      quantity: number;
+      product_id: string;
+      status: OrderStatus;
+      amount: number;
+      coin: string;
+      customer_email: string;
+    }>(
+      'SELECT id, quantity, product_id, status, amount, coin, customer_email FROM orders WHERE id = $1',
       [orderId]
     );
 
@@ -185,6 +194,28 @@ export async function PATCH(request: NextRequest) {
         'INSERT INTO logs (type, message, admin_id, order_id) VALUES ($1, $2, $3, $4)',
         [logType, `Order ${orderId} status changed to ${status} by ${admin.email}`, admin.adminId, orderId]
       );
+
+      // A manual flip to paid is a sale too — announce it once, on the transition.
+      if (status === 'paid' && order.status !== 'paid') {
+        try {
+          const productResult = await query<{ name: string }>(
+            'SELECT name FROM products WHERE id = $1',
+            [order.product_id]
+          );
+
+          await notifySale(await getDiscordWebhookUrl(), {
+            orderId,
+            productName: productResult[0]?.name || `Product ${order.product_id}`,
+            quantity: order.quantity,
+            amount: order.amount,
+            coin: order.coin,
+            customerEmail: order.customer_email,
+          });
+        } catch (error) {
+          console.error('Discord notification error:', error);
+          // Never fail the status update because Discord is down
+        }
+      }
     }
 
     return NextResponse.json({
