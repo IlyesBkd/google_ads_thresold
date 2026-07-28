@@ -27,6 +27,8 @@ export interface Credential {
   status: CredentialStatus;
   dateAdded: string;
   orderId: string | null;
+  googleAdsCreatedAt: string | null;
+  promoExpiresAt: string | null;
 }
 
 export interface Order {

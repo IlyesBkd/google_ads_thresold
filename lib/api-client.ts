@@ -114,10 +114,10 @@ class ApiClient {
     return this.request(`/inventory${queryString}`);
   }
 
-  async importCredentials(productId: string, credentials: string) {
+  async importCredentials(productId: string, credentials: string, googleAdsCreatedAt?: string) {
     return this.request('/inventory', {
       method: 'POST',
-      body: JSON.stringify({ productId, credentials }),
+      body: JSON.stringify({ productId, credentials, googleAdsCreatedAt }),
     });
   }
 
