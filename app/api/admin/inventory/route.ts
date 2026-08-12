@@ -4,6 +4,7 @@ import { query, execute } from '@/lib/db';
 import { StockItemWithProduct } from '@/lib/types';
 import { checkAndAlertStock } from '@/lib/stock-alerts';
 import { notifyWaitlist } from '@/lib/waitlist-notify';
+import { notifyTelegramRestock } from '@/lib/telegram';
 
 export async function GET(request: NextRequest) {
   try {
@@ -204,6 +205,9 @@ export async function POST(request: NextRequest) {
     // notified at most once, so re-importing won't re-notify already-notified users.
     if (addedCount > 0) {
       notifyWaitlist(productId).catch((err) => console.error('Waitlist notify error:', err));
+      notifyTelegramRestock(productId, addedCount).catch((err) =>
+        console.error('Telegram restock post error:', err)
+      );
     }
 
     return NextResponse.json({

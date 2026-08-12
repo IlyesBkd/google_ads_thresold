@@ -9,7 +9,7 @@
 
 import { query } from './db';
 import { sendRestockEmail } from './email';
-import { sendTelegramChannelMessage } from './telegram';
+
 
 export interface NotifyResult {
   pending: number;
@@ -55,13 +55,8 @@ export async function notifyWaitlist(productId: string): Promise<NotifyResult> {
     else emailFailed++;
   }
 
-  // ─── One Telegram channel broadcast ────────────────────────────────────────
-  const tgText =
-    `🔔 <b>${escapeHtml(product.name)}</b> is back in stock!\n\n` +
-    `💰 <b>${priceLabel}</b> — limited quantity, grab yours now.\n` +
-    `👉 ${appUrl}`;
-  const tg = await sendTelegramChannelMessage(tgText);
-  const telegram: NotifyResult['telegram'] = tg.success ? 'sent' : tg.skipped ? 'skipped' : 'failed';
+  // ─── Telegram channel post is handled by notifyTelegramRestock (inventory route) ───
+  const telegram: NotifyResult['telegram'] = 'skipped';
 
   // ─── Mark entries notified ─────────────────────────────────────────────────
   const viaParts: string[] = [];
@@ -86,8 +81,4 @@ export async function notifyWaitlist(productId: string): Promise<NotifyResult> {
   );
 
   return { pending: entries.length, emailed, emailFailed, telegram };
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

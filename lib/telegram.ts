@@ -124,3 +124,69 @@ export async function notifyTelegramSale(details: {
     console.log('✅ Telegram sale notification sent');
   }
 }
+
+
+/**
+ * Post a public restock announcement to the Telegram channel.
+ */
+export async function notifyTelegramRestock(
+  productId: string,
+  addedCount: number
+): Promise<void> {
+  const { token, channelId } = await getTelegramConfig();
+
+  if (!token || !channelId) {
+    console.log('📵 Telegram restock post skipped (not configured)');
+    return;
+  }
+
+  const products = await query<{ name: string; price: number }>(
+    'SELECT name, price FROM products WHERE id = $1',
+    [productId]
+  );
+  if (products.length === 0) return;
+  const priceLabel = `€${(products[0].price / 100).toFixed(0)}`;
+
+  const text = [
+    `🔥 <b>RESTOCK — ${addedCount} ${products[0].name}</b>`,
+    ``,
+    `💰 <b>${priceLabel}</b> · BTC / ETH / USDT`,
+    `⚡ Livraison automatique immédiate`,
+    ``,
+    `👉 gadscale.com`,
+  ].join('\n');
+
+  const result = await sendTelegramMessage(token, channelId, text);
+  if (!result.success) console.error('❌ Telegram restock post failed:', result.error);
+  else console.log('✅ Telegram restock post sent');
+}
+
+/**
+ * Post a public sale proof to the Telegram channel (no customer PII).
+ */
+export async function notifyTelegramSalePublic(details: {
+  productName: string;
+  quantity: number;
+  coin: string;
+}): Promise<void> {
+  const { token, channelId } = await getTelegramConfig();
+
+  if (!token || !channelId) {
+    console.log('📵 Telegram channel sale post skipped (not configured)');
+    return;
+  }
+
+  const text = [
+    `📦 <b>Nouvelle vente</b> ✓`,
+    ``,
+    `🛍️ <b>${details.productName}</b> ×${details.quantity}`,
+    `💳 Paiement ${details.coin.toUpperCase()} confirmé`,
+    `⚡ Livraison automatique`,
+    ``,
+    `👉 gadscale.com`,
+  ].join('\n');
+
+  const result = await sendTelegramMessage(token, channelId, text);
+  if (!result.success) console.error('❌ Telegram channel sale post failed:', result.error);
+  else console.log('✅ Telegram channel sale post sent');
+}
