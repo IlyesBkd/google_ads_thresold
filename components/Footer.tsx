@@ -40,7 +40,7 @@ export default function Footer() {
           <a href="#" className="footer-link" style={{ color: "#6A6A6A", textDecoration: "none" }}>
             Terms
           </a>
-          <a href="https://t.me/Selling_GAds" target="_blank" rel="noopener noreferrer" className="footer-link" style={{ color: "#6A6A6A", textDecoration: "none" }}>
+          <a href="https://t.me/googleads_now" target="_blank" rel="noopener noreferrer" className="footer-link" style={{ color: "#6A6A6A", textDecoration: "none" }}>
             Telegram
           </a>
         </div>

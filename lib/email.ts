@@ -140,7 +140,7 @@ function getCredentialsEmailHtml({
     <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; margin-bottom: 32px;">
       <div style="font-size: 14px; font-weight: 600; color: #FAFAFA; margin-bottom: 8px;">Need help?</div>
       <div style="font-size: 13px; color: #9A9A9A; line-height: 1.5;">
-        If you have any questions or the download link doesn't work, contact us on Telegram (@Selling_GAds) or reply to this email with your order ID.
+        If you have any questions or the download link doesn't work, contact us on Telegram (@googleads_now) or reply to this email with your order ID.
       </div>
     </div>
 
@@ -193,7 +193,7 @@ WHAT'S INSIDE THE FILE:
 ✓ Setup instructions
 
 NEED HELP?
-If you have any questions or the download link doesn't work, contact us on Telegram (@Selling_GAds) or reply to this email with your order ID.
+If you have any questions or the download link doesn't work, contact us on Telegram (@googleads_now) or reply to this email with your order ID.
 
 ---
 © 2026 GADSCALE · Threshold accounts delivered instantly

@@ -25,7 +25,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       data: {
-        telegram_username: settings.telegram_username || '@Selling_GAds',
+        telegram_username: settings.telegram_username || '@googleads_now',
       },
     });
   } catch (error) {
@@ -35,7 +35,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       data: {
-        telegram_username: '@Selling_GAds',
+        telegram_username: '@googleads_now',
       },
     });
   }

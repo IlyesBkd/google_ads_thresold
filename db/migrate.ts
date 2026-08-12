@@ -102,7 +102,7 @@ async function runMigration() {
       { key: 'download_validity_hours', value: process.env.DOWNLOAD_LINK_VALIDITY_HOURS || '24' },
       { key: 'download_max_uses', value: process.env.DOWNLOAD_LINK_MAX_USES || '3' },
       { key: 'discord_webhook_url', value: process.env.DISCORD_WEBHOOK_URL || '' },
-      { key: 'telegram_username', value: process.env.TELEGRAM_SUPPORT_USERNAME || '@Selling_GAds' },
+      { key: 'telegram_username', value: process.env.TELEGRAM_SUPPORT_USERNAME || '@googleads_now' },
       { key: 'telegram_bot_token', value: process.env.TELEGRAM_BOT_TOKEN || '' },
       { key: 'telegram_channel_id', value: process.env.TELEGRAM_CHANNEL_ID || '' },
     ];

@@ -116,7 +116,7 @@ IMPORTANT INSTRUCTIONS:
    • Replacement warranty valid for 24-48 hours (see product description)
 
 5. SUPPORT
-   • Telegram: @Selling_GAds
+   • Telegram: @googleads_now
    • Email: Reply to the delivery email with your Order ID
    • Response time: Usually within 1-2 hours
 

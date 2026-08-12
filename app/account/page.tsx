@@ -275,7 +275,7 @@ export default function AccountPage() {
       <footer style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "20px 24px", marginTop: "40px" }}>
         <div style={{ maxWidth: "720px", margin: "0 auto", textAlign: "center", fontSize: "12px", color: "#4A4A4A" }}>
           Need help?{" "}
-          <a href="https://t.me/Selling_GAds" target="_blank" rel="noopener noreferrer" style={{ color: "#4285F4", textDecoration: "none" }}>
+          <a href="https://t.me/googleads_now" target="_blank" rel="noopener noreferrer" style={{ color: "#4285F4", textDecoration: "none" }}>
             Contact us on Telegram
           </a>
         </div>

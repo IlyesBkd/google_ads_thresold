@@ -95,6 +95,6 @@ export const faqs: Faq[] = [
   },
   {
     q: "How do I contact support?",
-    a: "Message us directly on Telegram at @Selling_GAds. We typically respond within a few minutes during business hours.",
+    a: "Message us directly on Telegram at @googleads_now. We typically respond within a few minutes during business hours.",
   },
 ];
