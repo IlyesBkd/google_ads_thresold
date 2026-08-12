@@ -315,7 +315,7 @@ export default function CheckoutModal({
 
       if (!data.success) {
         if (data.error === 'Code promo invalide') {
-          setPromoError('Code promo invalide');
+          setPromoError('Invalid promo code');
           setLoading(false);
           return;
         }
@@ -843,7 +843,7 @@ export default function CheckoutModal({
                   marginBottom: '8px',
                 }}
               >
-                Code promo <span style={{ color: '#6A6A6A' }}>(optionnel)</span>
+                Promo code <span style={{ color: '#6A6A6A' }}>(optional)</span>
               </label>
               <input
                 type="text"
@@ -875,7 +875,7 @@ export default function CheckoutModal({
                 </p>
               )}
               <p style={{ margin: '6px 0 0', fontSize: '11px', color: '#6A6A6A' }}>
-                Membre @gadscale ? Utilisez le code partagé sur le channel pour -3%.
+                @gadscale member? Use the code shared in the channel for -3%.
               </p>
             </div>
 
