@@ -95,10 +95,10 @@ export async function notifyTelegramSale(details: {
   amount: number; // in cents
   coin: string;
   customerEmail: string;
+  promoCode?: string | null;
 }): Promise<void> {
   const { token, channelId } = await getTelegramConfig();
-  const salesChatId =
-    process.env.TELEGRAM_SALES_CHAT_ID || channelId;
+  const salesChatId = process.env.TELEGRAM_SALES_CHAT_ID || channelId;
 
   if (!token || !salesChatId) {
     console.log('📵 Telegram sale notification skipped (not configured)');
@@ -106,14 +106,20 @@ export async function notifyTelegramSale(details: {
   }
 
   const amountEur = (details.amount / 100).toFixed(2);
-  const text = [
+  const lines = [
     `🛒 <b>Nouvelle vente !</b>`,
     ``,
     `📦 <b>${details.productName}</b> ×${details.quantity}`,
     `💰 ${amountEur}€ (${details.coin.toUpperCase()})`,
     `📧 ${details.customerEmail}`,
     `🆔 <code>${details.orderId}</code>`,
-  ].join('\n');
+  ];
+
+  if (details.promoCode) {
+    lines.push(`🎟️ Code promo: -3%`);
+  }
+
+  const text = lines.join('\n');
 
   console.log(`📨 Sending Telegram sale notification for ${details.orderId}...`);
   const result = await sendTelegramMessage(token, salesChatId, text);
@@ -125,14 +131,10 @@ export async function notifyTelegramSale(details: {
   }
 }
 
-
 /**
  * Post a public restock announcement to the Telegram channel.
  */
-export async function notifyTelegramRestock(
-  productId: string,
-  addedCount: number
-): Promise<void> {
+export async function notifyTelegramRestock(productId: string, addedCount: number): Promise<void> {
   const { token, channelId } = await getTelegramConfig();
 
   if (!token || !channelId) {

@@ -20,10 +20,7 @@ export async function POST(request: NextRequest) {
 
     if (!verifyWebhookSignature(rawBody, signature)) {
       console.error('❌ Invalid webhook signature');
-      return NextResponse.json(
-        { success: false, error: 'Invalid signature' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: 'Invalid signature' }, { status: 401 });
     }
 
     // 3. Extract data
@@ -45,17 +42,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Get order
-    const order = await queryOne<Order>(
-      'SELECT * FROM orders WHERE id = $1',
-      [order_id]
-    );
+    const order = await queryOne<Order>('SELECT * FROM orders WHERE id = $1', [order_id]);
 
     if (!order) {
       console.error(`❌ Order not found: ${order_id}`);
-      return NextResponse.json(
-        { success: false, error: 'Order not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
     }
 
     // 5. Check if already processed (idempotence)
@@ -67,7 +58,11 @@ export async function POST(request: NextRequest) {
     // 6. Handle payment status
     console.log(`💳 Payment status: ${payment_status} for order ${order_id}`);
 
-    if (payment_status === 'finished' || payment_status === 'confirmed' || payment_status === 'sending') {
+    if (
+      payment_status === 'finished' ||
+      payment_status === 'confirmed' ||
+      payment_status === 'sending'
+    ) {
       // Payment confirmed! Update order and deliver
 
       // Update order status
@@ -117,6 +112,7 @@ export async function POST(request: NextRequest) {
           amount: order.amount,
           coin: order.coin,
           customerEmail: order.customer_email,
+          promoCode: order.promo_code,
         });
 
         console.log('📢 Telegram sale notification sent');
@@ -158,10 +154,7 @@ export async function POST(request: NextRequest) {
         await execute(
           `INSERT INTO logs (type, message, order_id)
            VALUES ('error', $1, $2)`,
-          [
-            `Automatic delivery failed for ${order_id}: ${deliveryResult.error}`,
-            order_id,
-          ]
+          [`Automatic delivery failed for ${order_id}: ${deliveryResult.error}`, order_id]
         );
       }
 
@@ -182,10 +175,7 @@ export async function POST(request: NextRequest) {
       await execute(
         `INSERT INTO logs (type, message, order_id)
          VALUES ('error', $1, $2)`,
-        [
-          `Payment ${payment_status} for ${order_id} (${payment_id})`,
-          order_id,
-        ]
+        [`Payment ${payment_status} for ${order_id} (${payment_id})`, order_id]
       );
 
       console.log(`❌ Payment ${payment_status} for order ${order_id}`);
@@ -213,10 +203,7 @@ export async function POST(request: NextRequest) {
       await execute(
         `INSERT INTO logs (type, message, order_id)
          VALUES ('error', $1, $2)`,
-        [
-          `Unknown payment status "${payment_status}" for ${order_id}`,
-          order_id,
-        ]
+        [`Unknown payment status "${payment_status}" for ${order_id}`, order_id]
       );
 
       console.warn(`⚠️ Unknown payment status: ${payment_status}`);
@@ -230,9 +217,6 @@ export async function POST(request: NextRequest) {
     console.error('❌ Webhook error:', error);
 
     // Return 200 to avoid NOWPayments retries (already logged)
-    return NextResponse.json(
-      { success: false, error: 'Internal error logged' },
-      { status: 200 }
-    );
+    return NextResponse.json({ success: false, error: 'Internal error logged' }, { status: 200 });
   }
 }

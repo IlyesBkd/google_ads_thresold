@@ -44,6 +44,7 @@ export interface Order {
   status: OrderStatus;
   wallet_address: string | null;
   tx_hash: string | null;
+  promo_code: string | null;
   created_at: Date;
   paid_at: Date | null;
   delivered_at: Date | null;

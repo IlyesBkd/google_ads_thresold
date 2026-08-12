@@ -6,15 +6,9 @@ import { query } from './db';
  */
 
 /**
- * Hardcoded fallback webhook so notifications work without any dashboard setup.
- * A URL saved in Settings (or DISCORD_WEBHOOK_URL) takes precedence over it.
- */
-const FALLBACK_WEBHOOK_URL =
-  'https://discord.com/api/webhooks/1525246168228036821/uwQYA6n-din9DZtHZSWNBtMXZe20x1Cjv_U2yYqdzp-mQ169Vor-r5ZPd6bHpDKFEpHJ';
-
-/**
- * Resolve the webhook to notify: Settings → env → hardcoded fallback.
+ * Resolve the webhook to notify: Settings (DB) → DISCORD_WEBHOOK_URL env var.
  * Never throws — a DB hiccup must not silence notifications.
+ * Returns empty string when nothing is configured (callers handle gracefully).
  */
 export async function getDiscordWebhookUrl(): Promise<string> {
   try {
@@ -28,7 +22,7 @@ export async function getDiscordWebhookUrl(): Promise<string> {
     console.error('Failed to read Discord webhook setting:', error);
   }
 
-  return process.env.DISCORD_WEBHOOK_URL?.trim() || FALLBACK_WEBHOOK_URL;
+  return process.env.DISCORD_WEBHOOK_URL?.trim() || '';
 }
 
 const COLORS = {

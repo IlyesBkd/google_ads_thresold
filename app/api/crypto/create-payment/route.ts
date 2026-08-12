@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { productId, quantity, customerEmail, coin } = parsed.data;
+    const { productId, quantity, customerEmail, coin, promoCode } = parsed.data;
 
     // Get product
     const product = await queryOne<Product>(
@@ -47,8 +47,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate amount
-    const totalAmount = product.price * quantity; // in cents
+    // Validate promo code against env var (simple fixed code)
+    let validPromoCode: string | null = null;
+    if (promoCode) {
+      const envPromoCode = process.env.PROMO_CODE;
+      if (envPromoCode && promoCode === envPromoCode) {
+        validPromoCode = promoCode;
+      } else {
+        return NextResponse.json({ success: false, error: 'Code promo invalide' }, { status: 400 });
+      }
+    }
+
+    // Calculate amount (apply -3% discount if promo code valid)
+    let totalAmount = product.price * quantity; // in cents
+    if (validPromoCode) {
+      totalAmount = Math.round(product.price * quantity * 0.97);
+    }
 
     // Create order
     const orderId = crypto.randomUUID();
@@ -56,9 +70,9 @@ export async function POST(request: NextRequest) {
     await execute(
       `INSERT INTO orders (
         id, product_id, quantity, customer_email,
-        amount, coin, status, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
-      [orderId, productId, quantity, customerEmail, totalAmount, coin, 'pending']
+        amount, coin, status, promo_code, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+      [orderId, productId, quantity, customerEmail, totalAmount, coin, 'pending', validPromoCode]
     );
 
     // Create NOWPayments invoice
@@ -97,21 +111,19 @@ export async function POST(request: NextRequest) {
       `INSERT INTO logs (type, message, order_id)
        VALUES ('sale', $1, $2)`,
       [
-        `Order ${orderId} created: ${quantity}x ${product.name} ($${totalAmount / 100}) by ${customerEmail}`,
+        `Order ${orderId} created: ${quantity}x ${product.name} ($${totalAmount / 100}) by ${customerEmail}${validPromoCode ? ` [promo: ${validPromoCode}]` : ''}`,
         orderId,
       ]
     );
 
     // If mock mode, simulate payment after 10 seconds
-    const isMockMode = !process.env.CRYPTO_GATEWAY_API_KEY ||
-                       process.env.CRYPTO_GATEWAY_API_KEY === 'your-crypto-gateway-api-key';
+    const isMockMode =
+      !process.env.CRYPTO_GATEWAY_API_KEY ||
+      process.env.CRYPTO_GATEWAY_API_KEY === 'your-crypto-gateway-api-key';
 
     if (isMockMode) {
       // Don't await - let it run in background
-      simulatePaymentConfirmation(
-        paymentResult.data!.paymentId,
-        orderId
-      ).catch(console.error);
+      simulatePaymentConfirmation(paymentResult.data!.paymentId, orderId).catch(console.error);
     }
 
     return NextResponse.json({
@@ -126,13 +138,11 @@ export async function POST(request: NextRequest) {
         priceCurrency: 'USD',
         expiresAt: paymentResult.data!.expirationEstimateDate,
         mockMode: isMockMode,
+        discount: validPromoCode ? 3 : 0,
       },
     });
   } catch (error) {
     console.error('Create payment error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

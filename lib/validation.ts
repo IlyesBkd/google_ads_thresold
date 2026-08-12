@@ -5,6 +5,7 @@ export const createPaymentSchema = z.object({
   quantity: z.number().int().min(1).max(100),
   customerEmail: z.string().email(),
   coin: z.enum(['BTC', 'ETH', 'USDT', 'btc', 'eth', 'usdttrc20']),
+  promoCode: z.string().max(32).optional(),
 });
 
 export const waitlistSchema = z
