@@ -56,7 +56,7 @@ export async function notifyWaitlist(productId: string): Promise<NotifyResult> {
   }
 
   // ─── Telegram channel post is handled by notifyTelegramRestock (inventory route) ───
-  const telegram: NotifyResult['telegram'] = 'skipped';
+  let telegram = 'skipped' as NotifyResult['telegram'];
 
   // ─── Mark entries notified ─────────────────────────────────────────────────
   const viaParts: string[] = [];
