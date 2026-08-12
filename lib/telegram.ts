@@ -47,12 +47,23 @@ export async function sendTelegramChannelMessage(
     return { success: false, skipped: true, error: 'Telegram bot not configured' };
   }
 
+  return sendTelegramMessage(token, channelId, text);
+}
+
+/**
+ * Send a message to any Telegram chat via a bot.
+ */
+export async function sendTelegramMessage(
+  token: string,
+  chatId: string,
+  text: string
+): Promise<{ success: boolean; error?: string }> {
   try {
     const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: channelId,
+        chat_id: chatId,
         text,
         parse_mode: 'HTML',
         disable_web_page_preview: false,
@@ -69,5 +80,47 @@ export async function sendTelegramChannelMessage(
   } catch (error) {
     console.error('Telegram send error:', error);
     return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+/**
+ * Notify about a new sale. Uses env vars:
+ *   TELEGRAM_SALES_CHAT_ID → chat ID to DM
+ * Falls back to TELEGRAM_CHANNEL_ID for channel broadcast.
+ */
+export async function notifyTelegramSale(details: {
+  orderId: string;
+  productName: string;
+  quantity: number;
+  amount: number; // in cents
+  coin: string;
+  customerEmail: string;
+}): Promise<void> {
+  const { token, channelId } = await getTelegramConfig();
+  const salesChatId =
+    process.env.TELEGRAM_SALES_CHAT_ID || channelId;
+
+  if (!token || !salesChatId) {
+    console.log('📵 Telegram sale notification skipped (not configured)');
+    return;
+  }
+
+  const amountEur = (details.amount / 100).toFixed(2);
+  const text = [
+    `🛒 <b>Nouvelle vente !</b>`,
+    ``,
+    `📦 <b>${details.productName}</b> ×${details.quantity}`,
+    `💰 ${amountEur}€ (${details.coin.toUpperCase()})`,
+    `📧 ${details.customerEmail}`,
+    `🆔 <code>${details.orderId}</code>`,
+  ].join('\n');
+
+  console.log(`📨 Sending Telegram sale notification for ${details.orderId}...`);
+  const result = await sendTelegramMessage(token, salesChatId, text);
+
+  if (!result.success) {
+    console.error('❌ Telegram sale notification failed:', result.error);
+  } else {
+    console.log('✅ Telegram sale notification sent');
   }
 }

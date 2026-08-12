@@ -3,6 +3,7 @@ import { queryOne, execute } from '@/lib/db';
 import { verifyWebhookSignature } from '@/lib/nowpayments';
 import { deliverOrder } from '@/lib/delivery';
 import { notifySale, getDiscordWebhookUrl } from '@/lib/discord';
+import { notifyTelegramSale } from '@/lib/telegram';
 import { checkAndAlertStock } from '@/lib/stock-alerts';
 import { Order } from '@/lib/types';
 
@@ -108,6 +109,17 @@ export async function POST(request: NextRequest) {
           coin: order.coin,
           customerEmail: order.customer_email,
         });
+
+        await notifyTelegramSale({
+          orderId: order_id,
+          productName: product?.name || `Product ${order.product_id}`,
+          quantity: order.quantity,
+          amount: order.amount,
+          coin: order.coin,
+          customerEmail: order.customer_email,
+        });
+
+        console.log('📢 Telegram sale notification sent');
 
         console.log('📢 Discord sale notification sent');
       } catch (error) {
