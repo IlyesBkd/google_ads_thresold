@@ -34,15 +34,77 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+  const [phase, setPhase] = useState<"email" | "code" | "verified">("email");
+  const [code, setCode] = useState("");
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     const savedEmail = localStorage.getItem("gadscale_customer_email");
     if (savedEmail) setEmail(savedEmail);
   }, []);
 
-  const handleSearch = async () => {
+  // A session from an earlier visit may still be valid — skip straight to the
+  // orders instead of asking for another code.
+  useEffect(() => {
+    (async () => {
+      const response = await fetch("/api/orders/by-email");
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data.success) {
+        setOrders(data.data.orders);
+        setEmail(data.data.email);
+        setPhase("verified");
+        setSearched(true);
+      }
+    })().catch(() => {});
+  }, []);
+
+  const loadOrders = async () => {
+    const response = await fetch("/api/orders/by-email");
+    const data = await response.json();
+    if (data.success) {
+      setOrders(data.data.orders);
+      setPhase("verified");
+      localStorage.setItem("gadscale_customer_email", email);
+    } else {
+      setError(data.error || "Failed to fetch orders");
+      setOrders([]);
+    }
+  };
+
+  const handleRequestCode = async () => {
     if (!email || !email.includes("@")) {
       setError("Please enter a valid email address");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const response = await fetch("/api/orders/request-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+
+      if (!data.success) {
+        setError(data.error || "Could not send a code. Try again.");
+      } else {
+        setPhase("code");
+        setNotice(`If ${email} has orders, a 6-digit code is on its way. It expires in 10 minutes.`);
+      }
+    } catch {
+      setError("Network error. Please try again.");
+    }
+    setLoading(false);
+  };
+
+  const handleVerifyCode = async () => {
+    if (!/^\d{6}$/.test(code.trim())) {
+      setError("Enter the 6-digit code from your email");
       return;
     }
 
@@ -51,21 +113,21 @@ export default function AccountPage() {
     setSearched(true);
 
     try {
-      const response = await fetch(
-        `/api/orders/by-email?email=${encodeURIComponent(email)}`
-      );
+      const response = await fetch("/api/orders/verify-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code: code.trim() }),
+      });
       const data = await response.json();
 
       if (!data.success) {
-        setError(data.error || "Failed to fetch orders");
-        setOrders([]);
+        setError(data.error || "Incorrect code");
       } else {
-        setOrders(data.data.orders);
-        localStorage.setItem("gadscale_customer_email", email);
+        setNotice(null);
+        await loadOrders();
       }
     } catch {
       setError("Network error. Please try again.");
-      setOrders([]);
     }
     setLoading(false);
   };
@@ -115,47 +177,117 @@ export default function AccountPage() {
           </p>
         </div>
 
-        {/* Search */}
-        <div style={{ display: "flex", gap: "10px", marginBottom: "36px" }}>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            placeholder="Enter your email"
-            disabled={loading}
-            style={{
-              flex: 1,
-              padding: "14px 16px",
-              background: "#111",
-              border: "1px solid rgba(255,255,255,0.1)",
-              borderRadius: "12px",
-              color: "#F5F5F5",
-              fontSize: "14px",
-              fontFamily: "inherit",
-              outline: "none",
-            }}
-          />
-          <button
-            onClick={handleSearch}
-            disabled={loading || !email}
-            style={{
-              padding: "14px 24px",
-              background: loading || !email ? "#1a3a6a" : "#4285F4",
-              color: "#fff",
-              border: "none",
-              borderRadius: "12px",
-              fontSize: "14px",
-              fontWeight: 600,
-              cursor: loading || !email ? "not-allowed" : "pointer",
-              fontFamily: "inherit",
-              opacity: loading || !email ? 0.6 : 1,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {loading ? "..." : "Search"}
-          </button>
-        </div>
+        {/* Step 1 — ask for the address */}
+        {phase === "email" && (
+          <div style={{ display: "flex", gap: "10px", marginBottom: "36px" }}>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleRequestCode()}
+              placeholder="Enter your email"
+              disabled={loading}
+              style={{
+                flex: 1,
+                padding: "14px 16px",
+                background: "#111",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: "12px",
+                color: "#F5F5F5",
+                fontSize: "14px",
+                fontFamily: "inherit",
+                outline: "none",
+              }}
+            />
+            <button
+              onClick={handleRequestCode}
+              disabled={loading || !email}
+              style={{
+                padding: "14px 24px",
+                background: loading || !email ? "#1a3a6a" : "#4285F4",
+                color: "#fff",
+                border: "none",
+                borderRadius: "12px",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: loading || !email ? "not-allowed" : "pointer",
+                fontFamily: "inherit",
+                opacity: loading || !email ? 0.6 : 1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {loading ? "..." : "Send code"}
+            </button>
+          </div>
+        )}
+
+        {/* Step 2 — the code from the email */}
+        {phase === "code" && (
+          <div style={{ marginBottom: "36px" }}>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                onKeyDown={(e) => e.key === "Enter" && handleVerifyCode()}
+                placeholder="000000"
+                disabled={loading}
+                autoFocus
+                style={{
+                  flex: 1,
+                  padding: "14px 16px",
+                  background: "#111",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "12px",
+                  color: "#F5F5F5",
+                  fontSize: "20px",
+                  letterSpacing: "0.35em",
+                  fontFamily: "var(--font-mono), monospace",
+                  outline: "none",
+                }}
+              />
+              <button
+                onClick={handleVerifyCode}
+                disabled={loading || code.length !== 6}
+                style={{
+                  padding: "14px 24px",
+                  background: loading || code.length !== 6 ? "#1a3a6a" : "#4285F4",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "12px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: loading || code.length !== 6 ? "not-allowed" : "pointer",
+                  fontFamily: "inherit",
+                  opacity: loading || code.length !== 6 ? 0.6 : 1,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {loading ? "..." : "Verify"}
+              </button>
+            </div>
+            <button
+              onClick={() => { setPhase("email"); setCode(""); setError(null); setNotice(null); }}
+              style={{
+                marginTop: "12px", background: "none", border: "none", padding: 0,
+                color: "#6A6A6A", fontSize: "13px", cursor: "pointer", fontFamily: "inherit",
+                textDecoration: "underline",
+              }}
+            >
+              Use a different email
+            </button>
+          </div>
+        )}
+
+        {/* Notice */}
+        {notice && (
+          <div style={{ marginBottom: "24px", padding: "14px 16px", background: "rgba(66,133,244,0.06)", border: "1px solid rgba(66,133,244,0.15)", borderRadius: "12px", fontSize: "13px", color: "#9CC0FF" }}>
+            {notice}
+          </div>
+        )}
 
         {/* Error */}
         {error && (

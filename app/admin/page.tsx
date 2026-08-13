@@ -962,6 +962,17 @@ export default function AdminPage() {
     setLoading(false);
   };
 
+  const reissueLink = async (orderId: string) => {
+    setLoading(true);
+    const response = await api.reissueDownloadLink(orderId);
+    showToast(
+      response.success
+        ? "New download link emailed to the customer"
+        : response.error || "Could not re-send the link"
+    );
+    setLoading(false);
+  };
+
   const renderOrders = () => {
     const filterChips: { label: string; value: string }[] = [
       { label: "All", value: "all" },
@@ -1480,7 +1491,7 @@ export default function AdminPage() {
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {actionBtn("Mark delivered", COLORS.green, () => updateOrderStatus(o.id, "delivered", "deliver"))}
             {actionBtn("Mark paid", COLORS.primary, () => updateOrderStatus(o.id, "paid"))}
-            {actionBtn("Re-deliver (.txt)", "#8E24AA", () => showToast("Credentials .txt re-sent"))}
+            {actionBtn("Re-deliver (.txt)", "#8E24AA", () => reissueLink(o.id))}
             {actionBtn("Refund", COLORS.yellow, () => updateOrderStatus(o.id, "refunded"))}
             {actionBtn("Cancel", COLORS.red, () => updateOrderStatus(o.id, "failed"))}
           </div>

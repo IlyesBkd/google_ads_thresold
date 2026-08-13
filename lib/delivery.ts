@@ -154,6 +154,83 @@ export async function deliverOrder(
 }
 
 /**
+ * Re-issue a download link for an order that was already delivered.
+ *
+ * The stock stays assigned — only a fresh token and a new email go out. Used
+ * when a customer loses the link or burns through the download limit.
+ */
+export async function reissueDownloadLink(
+  orderId: string,
+  adminId?: string
+): Promise<{ success: boolean; error?: string; downloadToken?: string }> {
+  try {
+    const order = await queryOne<Order & { product_name: string }>(
+      `SELECT o.*, p.name as product_name
+       FROM orders o
+       JOIN products p ON o.product_id = p.id
+       WHERE o.id = $1`,
+      [orderId]
+    );
+
+    if (!order) {
+      return { success: false, error: 'Order not found' };
+    }
+
+    if (order.status !== 'delivered') {
+      return { success: false, error: 'Order has not been delivered yet' };
+    }
+
+    const assigned = await query<{ id: string }>(
+      `SELECT id FROM stock_items WHERE order_id = $1 AND status = 'sold'`,
+      [orderId]
+    );
+
+    if (assigned.length === 0) {
+      return { success: false, error: 'No credentials are attached to this order' };
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(
+      expiresAt.getHours() + parseInt(process.env.DOWNLOAD_LINK_VALIDITY_HOURS || '24')
+    );
+
+    await execute(
+      `INSERT INTO download_tokens (order_id, token, expires_at, max_uses)
+       VALUES ($1, $2, $3, $4)`,
+      [orderId, token, expiresAt.toISOString(), parseInt(process.env.DOWNLOAD_LINK_MAX_USES || '3')]
+    );
+
+    const emailResult = await sendCredentialsEmail(
+      order.customer_email,
+      orderId,
+      order.product_name,
+      token,
+      expiresAt
+    );
+
+    if (!emailResult.success) {
+      return { success: false, error: `Email failed: ${emailResult.error}` };
+    }
+
+    await execute(
+      `INSERT INTO logs (type, message, admin_id, order_id)
+       VALUES ('delivery', $1, $2, $3)`,
+      [
+        `Download link re-issued for ${orderId} to ${order.customer_email}`,
+        adminId || null,
+        orderId,
+      ]
+    );
+
+    return { success: true, downloadToken: token };
+  } catch (error) {
+    console.error('Re-issue error:', error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+/**
  * Get credentials for a download token
  */
 export async function getCredentialsForToken(token: string): Promise<{

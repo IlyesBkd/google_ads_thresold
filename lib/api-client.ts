@@ -11,10 +11,7 @@ export interface ApiResponse<T = any> {
 class ApiClient {
   private baseUrl = '/api/admin';
 
-  private async request<T>(
-    endpoint: string,
-    options?: RequestInit
-  ): Promise<ApiResponse<T>> {
+  private async request<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
     try {
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         ...options,
@@ -80,15 +77,18 @@ class ApiClient {
     });
   }
 
-  async updateProduct(id: string, data: Partial<{
-    name: string;
-    description: string;
-    price: number;
-    threshold_value: number;
-    category: string;
-    low_stock_alert: number;
-    active: boolean;
-  }>) {
+  async updateProduct(
+    id: string,
+    data: Partial<{
+      name: string;
+      description: string;
+      price: number;
+      threshold_value: number;
+      category: string;
+      low_stock_alert: number;
+      active: boolean;
+    }>
+  ) {
     return this.request('/products', {
       method: 'PATCH',
       body: JSON.stringify({ id, ...data }),
@@ -154,13 +154,16 @@ class ApiClient {
     });
   }
 
+  async reissueDownloadLink(orderId: string) {
+    return this.request('/orders/reissue', {
+      method: 'POST',
+      body: JSON.stringify({ orderId }),
+    });
+  }
+
   // ─── Logs ─────────────────────────────────────────────────────────────────
 
-  async getLogs(params?: {
-    type?: string;
-    limit?: number;
-    offset?: number;
-  }) {
+  async getLogs(params?: { type?: string; limit?: number; offset?: number }) {
     const queryString = params ? '?' + new URLSearchParams(params as any).toString() : '';
     return this.request(`/logs${queryString}`);
   }

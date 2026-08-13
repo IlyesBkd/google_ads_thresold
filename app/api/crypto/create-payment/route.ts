@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { execute, queryOne } from '@/lib/db';
 import { createPayment, simulatePaymentConfirmation } from '@/lib/nowpayments';
 import { reserveStock, releaseReservation } from '@/lib/reservations';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { Product } from '@/lib/types';
 import { createPaymentSchema } from '@/lib/validation';
 
@@ -18,6 +19,16 @@ export async function POST(request: NextRequest) {
     }
 
     const { productId, quantity, customerEmail, coin, promoCode } = parsed.data;
+
+    // Each order creation reserves stock, so an unthrottled caller could hold
+    // the whole inventory hostage with junk checkouts.
+    const limited = await rateLimit('create-payment', getClientIp(request), 8, 900);
+    if (!limited.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many checkout attempts. Try again shortly.' },
+        { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds) } }
+      );
+    }
 
     // Get product
     const product = await queryOne<Product>(

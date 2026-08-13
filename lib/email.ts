@@ -57,6 +57,78 @@ export async function sendCredentialsEmail(
 }
 
 /**
+ * Send the one-time code that unlocks a buyer's order history.
+ */
+export async function sendAccessCodeEmail(
+  customerEmail: string,
+  code: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await getResend().emails.send({
+      from: FROM_EMAIL,
+      to: customerEmail,
+      subject: `${code} is your GADSCALE access code`,
+      html: getAccessCodeEmailHtml(code),
+      text: [
+        `Your GADSCALE access code is ${code}`,
+        ``,
+        `Enter it at ${APP_URL}/account to see your orders.`,
+        `The code expires in 10 minutes.`,
+        ``,
+        `If you didn't request this, ignore this email — nothing was shared.`,
+      ].join('\n'),
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Access code email error:', error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+function getAccessCodeEmailHtml(code: string) {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your access code</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #080808; color: #FAFAFA;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+
+    <div style="text-align: center; margin-bottom: 36px;">
+      <span style="font-size: 20px; font-weight: 600; letter-spacing: -0.02em; color: #F5F5F5;">GADSCALE</span>
+      <h1 style="margin: 16px 0 0; font-size: 26px; font-weight: 600; letter-spacing: -0.03em; color: #FAFAFA;">Your access code</h1>
+    </div>
+
+    <div style="background: #0C0C0C; border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 32px; text-align: center;">
+      <p style="margin: 0 0 22px; font-size: 15px; line-height: 1.6; color: #9A9A9A;">
+        Enter this code to see your orders and download your credentials.
+      </p>
+
+      <div style="font-family: 'Courier New', monospace; font-size: 38px; font-weight: 700; letter-spacing: 0.22em; color: #4285F4; padding: 18px 0;">
+        ${code}
+      </div>
+
+      <p style="margin: 18px 0 0; font-size: 13px; color: #8A8A8A;">
+        Expires in <strong style="color: #FBBC04;">10 minutes</strong>.
+      </p>
+    </div>
+
+    <p style="margin: 26px 0 0; font-size: 13px; line-height: 1.6; color: #6A6A6A; text-align: center;">
+      Didn't request this? Ignore this email — nothing was shared and no one can
+      reach your orders without the code.
+    </p>
+
+  </div>
+</body>
+</html>
+  `.trim();
+}
+
+/**
  * HTML email template for credentials delivery
  */
 function getCredentialsEmailHtml({

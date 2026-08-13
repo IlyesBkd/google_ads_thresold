@@ -1,20 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
-import { query } from "@/lib/db";
-import { ordersByEmailSchema } from "@/lib/validation";
+import { NextRequest, NextResponse } from 'next/server';
+import { query } from '@/lib/db';
+import { getVerifiedEmail } from '@/lib/order-access';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const parsed = ordersByEmailSchema.safeParse({ email: searchParams.get("email") });
+    // The address is taken from the verified session, never from the query
+    // string: this response carries a live download token, which is enough to
+    // retrieve the purchased account credentials.
+    const email = await getVerifiedEmail(request);
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: "Valid email is required" },
-        { status: 400 }
-      );
+    if (!email) {
+      return NextResponse.json({ success: false, error: 'Verification required' }, { status: 401 });
     }
-
-    const email = parsed.data.email;
 
     // Fetch orders for this email with product details and download token
     const orders = await query<{
@@ -57,7 +54,7 @@ export async function GET(request: NextRequest) {
        LEFT JOIN download_tokens dt ON o.id = dt.order_id
        WHERE o.customer_email = $1
        ORDER BY o.created_at DESC`,
-      [email.toLowerCase()]
+      [email]
     );
 
     // Format response
@@ -102,11 +99,11 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Fetch orders by email error:", error);
+    console.error('Fetch orders by email error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to fetch orders",
+        error: 'Failed to fetch orders',
       },
       { status: 500 }
     );

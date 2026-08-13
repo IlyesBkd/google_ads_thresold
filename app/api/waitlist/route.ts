@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import { query } from "@/lib/db";
-import { waitlistSchema } from "@/lib/validation";
+import { NextRequest, NextResponse } from 'next/server';
+import { query } from '@/lib/db';
+import { waitlistSchema } from '@/lib/validation';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,24 +25,26 @@ export async function POST(request: NextRequest) {
 
     const { productId, telegramUsername, email } = parsed.data;
 
+    const limited = await rateLimit('waitlist', getClientIp(request), 5, 3600);
+    if (!limited.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many signups. Try again later.' },
+        { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds) } }
+      );
+    }
+
     const cleanUsername = telegramUsername
-      ? telegramUsername.startsWith("@")
+      ? telegramUsername.startsWith('@')
         ? telegramUsername
         : `@${telegramUsername}`
       : null;
     const cleanEmail = email ? email.toLowerCase() : null;
 
     // Check if product exists
-    const productCheck = await query(
-      "SELECT id FROM products WHERE id = $1",
-      [productId]
-    );
+    const productCheck = await query('SELECT id FROM products WHERE id = $1', [productId]);
 
     if (productCheck.length === 0) {
-      return NextResponse.json(
-        { success: false, error: "Product not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
     }
 
     // De-dupe: find an existing entry for this product matching telegram OR email
@@ -81,11 +84,11 @@ export async function POST(request: NextRequest) {
       message: "You're on the list — we'll notify you when it's back in stock",
     });
   } catch (error) {
-    console.error("Waitlist registration error:", error);
+    console.error('Waitlist registration error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to register for notifications",
+        error: 'Failed to register for notifications',
       },
       { status: 500 }
     );
@@ -96,13 +99,10 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const productId = searchParams.get("productId");
+    const productId = searchParams.get('productId');
 
     if (!productId) {
-      return NextResponse.json(
-        { success: false, error: "Product ID required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: 'Product ID required' }, { status: 400 });
     }
 
     // Return count only (public)
@@ -113,18 +113,18 @@ export async function GET(request: NextRequest) {
       [productId]
     );
 
-    const count = parseInt(rows[0]?.count || "0", 10);
+    const count = parseInt(rows[0]?.count || '0', 10);
 
     return NextResponse.json({
       success: true,
       data: { count },
     });
   } catch (error) {
-    console.error("Waitlist fetch error:", error);
+    console.error('Waitlist fetch error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to fetch waitlist count",
+        error: 'Failed to fetch waitlist count',
       },
       { status: 500 }
     );

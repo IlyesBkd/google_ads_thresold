@@ -5,6 +5,7 @@ import { signToken } from '@/lib/jwt';
 import { Admin } from '@/lib/types';
 import { adminLoginSchema } from '@/lib/validation';
 import { COOKIE_MAX_AGE_SECONDS } from '@/lib/constants';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,11 +21,27 @@ export async function POST(request: NextRequest) {
 
     const { email, password } = parsed.data;
 
+    // Brute force guard. Per-IP stops a single attacker; per-account stops a
+    // distributed attempt against one known admin address.
+    const byIp = await rateLimit('admin-login-ip', getClientIp(request), 10, 900);
+    const byAccount = await rateLimit('admin-login-user', email.toLowerCase(), 5, 900);
+
+    if (!byIp.allowed || !byAccount.allowed) {
+      const retry = Math.max(byIp.retryAfterSeconds, byAccount.retryAfterSeconds);
+
+      await query('INSERT INTO logs (type, message) VALUES ($1, $2)', [
+        'error',
+        `Login rate limit hit for ${email} from ${getClientIp(request)}`,
+      ]).catch(() => {});
+
+      return NextResponse.json(
+        { success: false, error: 'Too many attempts. Try again later.' },
+        { status: 429, headers: { 'Retry-After': String(retry) } }
+      );
+    }
+
     // Find admin by email
-    const admins = await query<Admin>(
-      'SELECT * FROM admins WHERE email = $1 LIMIT 1',
-      [email]
-    );
+    const admins = await query<Admin>('SELECT * FROM admins WHERE email = $1 LIMIT 1', [email]);
 
     const admin = admins[0];
 
@@ -53,10 +70,11 @@ export async function POST(request: NextRequest) {
     });
 
     // Log the login
-    await query(
-      'INSERT INTO logs (type, message, admin_id) VALUES ($1, $2, $3)',
-      ['login', `Admin ${admin.email} logged in`, admin.id]
-    );
+    await query('INSERT INTO logs (type, message, admin_id) VALUES ($1, $2, $3)', [
+      'login',
+      `Admin ${admin.email} logged in`,
+      admin.id,
+    ]);
 
     // Return token with cookie
     const response = NextResponse.json({
@@ -83,9 +101,6 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('Login error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }
