@@ -132,6 +132,105 @@ export async function notifyTelegramSale(details: {
 }
 
 /**
+ * Ops notification: full sale details plus the stock position left behind.
+ *
+ * Runs on its own bot (TELEGRAM_OPS_BOT_TOKEN / TELEGRAM_OPS_CHAT_ID) so it is
+ * independent of the public @gadscale channel and its token.
+ */
+export async function notifyTelegramOpsSale(details: {
+  orderId: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  amount: number; // in cents
+  coin: string;
+  customerEmail: string;
+  promoCode?: string | null;
+  delivered: boolean;
+}): Promise<void> {
+  const token = process.env.TELEGRAM_OPS_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_OPS_CHAT_ID;
+
+  if (!token || !chatId) {
+    console.log('📵 Telegram ops notification skipped (not configured)');
+    return;
+  }
+
+  // Stock is read after delivery, so these counts already exclude this sale.
+  let stockLine = '❓ Stock indisponible';
+  let otherProductsLine: string | null = null;
+
+  try {
+    const counts = await query<{ status: string; count: string }>(
+      `SELECT status, COUNT(*) as count FROM stock_items
+       WHERE product_id = $1 GROUP BY status`,
+      [details.productId]
+    );
+
+    const by = (s: string) => parseInt(counts.find((c) => c.status === s)?.count || '0', 10);
+
+    const available = by('available');
+    const reserved = by('reserved');
+
+    stockLine =
+      `📊 Stock restant : <b>${available}</b> dispo` +
+      (reserved > 0 ? ` · ${reserved} réservé${reserved > 1 ? 's' : ''}` : '');
+
+    if (available === 0) {
+      stockLine += `\n🚨 <b>RUPTURE DE STOCK</b>`;
+    } else if (available <= 3) {
+      stockLine += `\n⚠️ <b>Stock bas</b>`;
+    }
+
+    const others = await query<{ name: string; count: string }>(
+      `SELECT p.name, COUNT(s.id) as count
+       FROM products p
+       LEFT JOIN stock_items s ON s.product_id = p.id AND s.status = 'available'
+       WHERE p.active = true AND p.id <> $1
+       GROUP BY p.name
+       ORDER BY p.name`,
+      [details.productId]
+    );
+
+    if (others.length > 0) {
+      otherProductsLine = others.map((o) => `   • ${o.name} : ${o.count}`).join('\n');
+    }
+  } catch (error) {
+    console.error('Ops stock lookup failed:', error);
+  }
+
+  const amountEur = (details.amount / 100).toFixed(2);
+  const lines = [
+    `💸 <b>VENTE — ${amountEur}€</b>`,
+    ``,
+    `📦 <b>${details.productName}</b> ×${details.quantity}`,
+    `💰 ${amountEur}€ en ${details.coin.toUpperCase()}`,
+    `📧 ${details.customerEmail}`,
+    `🆔 <code>${details.orderId}</code>`,
+  ];
+
+  if (details.promoCode) {
+    lines.push(`🎟️ Code promo <code>${details.promoCode}</code> (-3%)`);
+  }
+
+  lines.push(details.delivered ? `✅ Livrée automatiquement` : `⚠️ <b>NON LIVRÉE</b> — à traiter`);
+
+  lines.push(``, stockLine);
+
+  if (otherProductsLine) {
+    lines.push(``, `📚 Autres produits :`, otherProductsLine);
+  }
+
+  const result = await sendTelegramMessage(token, chatId, lines.join('\n'));
+
+  if (!result.success) {
+    console.error('❌ Telegram ops notification failed:', result.error);
+  } else {
+    console.log('✅ Telegram ops notification sent');
+  }
+}
+
+/**
  * Post a public restock announcement to the Telegram channel.
  */
 export async function notifyTelegramRestock(productId: string, addedCount: number): Promise<void> {

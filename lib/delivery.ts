@@ -43,20 +43,34 @@ export async function deliverOrder(
       return { success: false, error: 'Order must be paid before delivery' };
     }
 
-    // 2. Atomically claim available stock (prevents race conditions)
+    // 2. Convert this order's own reservation into a sale. Checkout normally
+    //    reserved the items already, so nothing else can have taken them.
     const claimedStock = await query<StockItem>(
       `UPDATE stock_items
-       SET status = 'sold', order_id = $1, updated_at = NOW()
-       WHERE id IN (
-         SELECT id FROM stock_items
-         WHERE product_id = $2 AND status = 'available'
-         ORDER BY created_at
-         LIMIT $3
-         FOR UPDATE SKIP LOCKED
-       )
+       SET status = 'sold', updated_at = NOW()
+       WHERE order_id = $1 AND status = 'reserved'
        RETURNING *`,
-      [orderId, order.product_id, order.quantity]
+      [orderId]
     );
+
+    // 3. Top up from free stock if the reservation is short — covers orders
+    //    created before reservations existed, and partially released holds.
+    if (claimedStock.length < order.quantity) {
+      const topUp = await query<StockItem>(
+        `UPDATE stock_items
+         SET status = 'sold', order_id = $1, updated_at = NOW()
+         WHERE id IN (
+           SELECT id FROM stock_items
+           WHERE product_id = $2 AND status = 'available'
+           ORDER BY created_at
+           LIMIT $3
+           FOR UPDATE SKIP LOCKED
+         )
+         RETURNING *`,
+        [orderId, order.product_id, order.quantity - claimedStock.length]
+      );
+      claimedStock.push(...topUp);
+    }
 
     if (claimedStock.length < order.quantity) {
       // Rollback any partially claimed items
@@ -86,19 +100,13 @@ export async function deliverOrder(
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date();
     expiresAt.setHours(
-      expiresAt.getHours() +
-      parseInt(process.env.DOWNLOAD_LINK_VALIDITY_HOURS || '24')
+      expiresAt.getHours() + parseInt(process.env.DOWNLOAD_LINK_VALIDITY_HOURS || '24')
     );
 
     await execute(
       `INSERT INTO download_tokens (order_id, token, expires_at, max_uses)
        VALUES ($1, $2, $3, $4)`,
-      [
-        orderId,
-        token,
-        expiresAt.toISOString(),
-        parseInt(process.env.DOWNLOAD_LINK_MAX_USES || '3'),
-      ]
+      [orderId, token, expiresAt.toISOString(), parseInt(process.env.DOWNLOAD_LINK_MAX_USES || '3')]
     );
 
     // 6. Send email
@@ -148,9 +156,7 @@ export async function deliverOrder(
 /**
  * Get credentials for a download token
  */
-export async function getCredentialsForToken(
-  token: string
-): Promise<{
+export async function getCredentialsForToken(token: string): Promise<{
   success: boolean;
   error?: string;
   credentials?: Array<{

@@ -4,6 +4,7 @@
 
 import { query } from './db';
 import { notifyStockAlert, getDiscordWebhookUrl } from './discord';
+import { releaseExpiredReservations } from './reservations';
 
 interface StockCheck {
   productId: string;
@@ -17,6 +18,9 @@ interface StockCheck {
  */
 export async function checkAndAlertStock(productId?: string): Promise<void> {
   try {
+    // Don't raise a low-stock alarm over holds that already timed out.
+    await releaseExpiredReservations();
+
     // Same resolution as sale notifications (Settings → env → hardcoded)
     const webhookUrl = await getDiscordWebhookUrl();
 

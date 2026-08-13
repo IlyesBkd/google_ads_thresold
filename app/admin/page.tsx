@@ -1478,7 +1478,7 @@ export default function AdminPage() {
 
           <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>Actions</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {actionBtn("Mark delivered", COLORS.green, () => updateOrderStatus(o.id, "delivered"))}
+            {actionBtn("Mark delivered", COLORS.green, () => updateOrderStatus(o.id, "delivered", "deliver"))}
             {actionBtn("Mark paid", COLORS.primary, () => updateOrderStatus(o.id, "paid"))}
             {actionBtn("Re-deliver (.txt)", "#8E24AA", () => showToast("Credentials .txt re-sent"))}
             {actionBtn("Refund", COLORS.yellow, () => updateOrderStatus(o.id, "refunded"))}

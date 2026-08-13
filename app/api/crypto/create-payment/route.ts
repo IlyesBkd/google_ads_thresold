@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { execute, queryOne } from '@/lib/db';
 import { createPayment, simulatePaymentConfirmation } from '@/lib/nowpayments';
+import { reserveStock, releaseReservation } from '@/lib/reservations';
 import { Product } from '@/lib/types';
 import { createPaymentSchema } from '@/lib/validation';
 
@@ -28,22 +29,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Product not found or inactive' },
         { status: 404 }
-      );
-    }
-
-    // Check stock availability
-    const stockResult = await queryOne<{ count: string }>(
-      `SELECT COUNT(*) as count FROM stock_items
-       WHERE product_id = $1 AND status = 'available'`,
-      [productId]
-    );
-
-    const availableStock = parseInt(stockResult?.count || '0');
-
-    if (availableStock < quantity) {
-      return NextResponse.json(
-        { success: false, error: `Insufficient stock: need ${quantity}, have ${availableStock}` },
-        { status: 400 }
       );
     }
 
@@ -75,6 +60,19 @@ export async function POST(request: NextRequest) {
       [orderId, productId, quantity, customerEmail, totalAmount, coin, 'pending', validPromoCode]
     );
 
+    // Hold the credentials for this order so a concurrent checkout cannot sell
+    // the same accounts. Released automatically if payment never arrives.
+    const reservation = await reserveStock(orderId, productId, quantity);
+
+    if (!reservation.ok) {
+      await execute('DELETE FROM orders WHERE id = $1', [orderId]);
+
+      return NextResponse.json(
+        { success: false, error: reservation.error || 'Insufficient stock' },
+        { status: 400 }
+      );
+    }
+
     // Create NOWPayments invoice
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const webhookUrl = `${appUrl}/api/crypto/webhook`;
@@ -89,7 +87,8 @@ export async function POST(request: NextRequest) {
     });
 
     if (!paymentResult.success) {
-      // Cleanup: delete order
+      // Cleanup: free the held stock, then delete order
+      await releaseReservation(orderId);
       await execute('DELETE FROM orders WHERE id = $1', [orderId]);
 
       return NextResponse.json(

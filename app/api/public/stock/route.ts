@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { releaseExpiredReservations } from "@/lib/reservations";
 
 export async function GET() {
   try {
+    // Busiest read path, so it doubles as the sweeper for abandoned checkouts.
+    await releaseExpiredReservations();
+
     // Get stock count for each product
     const rows = await query<{ product_id: string; count: string }>(
       `SELECT product_id, COUNT(*) as count

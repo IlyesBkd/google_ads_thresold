@@ -3,6 +3,8 @@ import { requireAuth } from '@/lib/jwt';
 import { query, execute } from '@/lib/db';
 import { OrderWithDetails, OrderStatus } from '@/lib/types';
 import { notifySale, getDiscordWebhookUrl } from '@/lib/discord';
+import { deliverOrder } from '@/lib/delivery';
+import { notifyTelegramOpsSale } from '@/lib/telegram';
 
 export async function GET(request: NextRequest) {
   try {
@@ -59,9 +61,7 @@ export async function GET(request: NextRequest) {
 
           return {
             ...order,
-            delivered_credentials: credentials.map(
-              (cred) => `${cred.email}:${cred.password}`
-            ),
+            delivered_credentials: credentials.map((cred) => `${cred.email}:${cred.password}`),
           };
         }
         return order;
@@ -77,10 +77,7 @@ export async function GET(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     const status = message.includes('Unauthorized') ? 401 : 500;
 
-    return NextResponse.json(
-      { success: false, error: message },
-      { status }
-    );
+    return NextResponse.json({ success: false, error: message }, { status });
   }
 }
 
@@ -102,10 +99,7 @@ export async function PATCH(request: NextRequest) {
     // Validate status
     const validStatuses: OrderStatus[] = ['pending', 'paid', 'delivered', 'failed', 'refunded'];
     if (!validStatuses.includes(status as OrderStatus)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid status' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: 'Invalid status' }, { status: 400 });
     }
 
     // Get order details
@@ -117,62 +111,62 @@ export async function PATCH(request: NextRequest) {
       amount: number;
       coin: string;
       customer_email: string;
+      promo_code: string | null;
     }>(
-      'SELECT id, quantity, product_id, status, amount, coin, customer_email FROM orders WHERE id = $1',
+      'SELECT id, quantity, product_id, status, amount, coin, customer_email, promo_code FROM orders WHERE id = $1',
       [orderId]
     );
 
     if (orderResult.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Order not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
     }
 
     const order = orderResult[0];
 
-    // If delivering order, assign stock items
+    // If delivering order, hand off to the shared delivery service: it claims
+    // stock atomically, creates the download token and emails the credentials.
     if (action === 'deliver' && status === 'delivered' && order.status !== 'delivered') {
-      // Find available stock items for this product
-      const availableStock = await query<{ id: string }>(
-        `SELECT id FROM stock_items
-         WHERE product_id = $1 AND status = 'available'
-         LIMIT $2`,
-        [order.product_id, order.quantity]
-      );
+      // deliverOrder requires a paid order; a manual delivery from `pending`
+      // implies the payment was settled out of band.
+      if (order.status !== 'paid') {
+        await execute(
+          `UPDATE orders
+           SET status = 'paid', paid_at = COALESCE(paid_at, NOW()), updated_at = NOW()
+           WHERE id = $1`,
+          [orderId]
+        );
+      }
 
-      if (availableStock.length < order.quantity) {
+      const result = await deliverOrder(orderId, admin.adminId);
+
+      if (!result.success) {
         return NextResponse.json(
-          {
-            success: false,
-            error: `Not enough stock available. Need ${order.quantity}, have ${availableStock.length}`
-          },
+          { success: false, error: result.error || 'Delivery failed' },
           { status: 400 }
         );
       }
 
-      // Assign stock items to this order
-      const stockIds = availableStock.map((item) => item.id);
-      await execute(
-        `UPDATE stock_items
-         SET order_id = $1, status = 'sold', updated_at = NOW()
-         WHERE id = ANY($2)`,
-        [orderId, stockIds]
-      );
+      // A manual delivery is a sale too — same ops notification as the webhook.
+      try {
+        const productResult = await query<{ name: string }>(
+          'SELECT name FROM products WHERE id = $1',
+          [order.product_id]
+        );
 
-      // Update order status and set delivered_at
-      await execute(
-        `UPDATE orders
-         SET status = $1, delivered_at = NOW(), updated_at = NOW()
-         WHERE id = $2`,
-        [status, orderId]
-      );
-
-      // Log the delivery
-      await query(
-        'INSERT INTO logs (type, message, admin_id, order_id) VALUES ($1, $2, $3, $4)',
-        ['delivery', `Order ${orderId} delivered by ${admin.email}`, admin.adminId, orderId]
-      );
+        await notifyTelegramOpsSale({
+          orderId,
+          productId: order.product_id,
+          productName: productResult[0]?.name || `Product ${order.product_id}`,
+          quantity: order.quantity,
+          amount: order.amount,
+          coin: order.coin,
+          customerEmail: order.customer_email,
+          promoCode: order.promo_code,
+          delivered: true,
+        });
+      } catch (error) {
+        console.error('Telegram ops notification error:', error);
+      }
     } else {
       // Simple status update
       const updateFields: string[] = ['status = $1', 'updated_at = NOW()'];
@@ -183,17 +177,16 @@ export async function PATCH(request: NextRequest) {
         updateFields.push('paid_at = NOW()');
       }
 
-      await execute(
-        `UPDATE orders SET ${updateFields.join(', ')} WHERE id = $2`,
-        updateParams
-      );
+      await execute(`UPDATE orders SET ${updateFields.join(', ')} WHERE id = $2`, updateParams);
 
       // Log the status change
       const logType = status === 'refunded' ? 'refund' : 'sale';
-      await query(
-        'INSERT INTO logs (type, message, admin_id, order_id) VALUES ($1, $2, $3, $4)',
-        [logType, `Order ${orderId} status changed to ${status} by ${admin.email}`, admin.adminId, orderId]
-      );
+      await query('INSERT INTO logs (type, message, admin_id, order_id) VALUES ($1, $2, $3, $4)', [
+        logType,
+        `Order ${orderId} status changed to ${status} by ${admin.email}`,
+        admin.adminId,
+        orderId,
+      ]);
 
       // A manual flip to paid is a sale too — announce it once, on the transition.
       if (status === 'paid' && order.status !== 'paid') {
@@ -227,9 +220,6 @@ export async function PATCH(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     const status = message.includes('Unauthorized') ? 401 : 500;
 
-    return NextResponse.json(
-      { success: false, error: message },
-      { status }
-    );
+    return NextResponse.json({ success: false, error: message }, { status });
   }
 }
