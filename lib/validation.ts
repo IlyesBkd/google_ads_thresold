@@ -11,13 +11,16 @@ export const createPaymentSchema = z.object({
 export const waitlistSchema = z
   .object({
     productId: z.string().min(1),
+    // nullish, not optional: JSON clients routinely send an explicit null for
+    // "not provided", and rejecting that with "Invalid email address" would be
+    // both wrong and confusing.
     telegramUsername: z
       .string()
       .min(2)
       .max(64)
       .regex(/^@?[a-zA-Z0-9_]+$/, 'Invalid Telegram username')
-      .optional(),
-    email: z.string().email('Invalid email address').optional(),
+      .nullish(),
+    email: z.string().email('Invalid email address').nullish(),
   })
   .refine((d) => Boolean(d.telegramUsername) || Boolean(d.email), {
     message: 'Enter your email or a Telegram username',

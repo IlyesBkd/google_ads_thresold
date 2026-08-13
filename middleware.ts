@@ -14,14 +14,26 @@ function getSecurityHeaders(): Record<string, string> {
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
     'Content-Security-Policy': [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      // 'unsafe-eval' dropped: nothing in the bundle needs runtime evaluation,
+      // and this page renders purchased account credentials.
+      // 'unsafe-inline' stays for now — Next injects inline bootstrap scripts,
+      // and removing it needs the nonce plumbing, not just a header edit.
+      "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
       "font-src 'self'",
-      "connect-src 'self' https://api.coingecko.com https://*.sentry.io https://*.ingest.sentry.io",
+      [
+        "connect-src 'self'",
+        'https://api.coingecko.com',
+        'https://*.sentry.io',
+        'https://*.ingest.sentry.io',
+        'https://*.posthog.com',
+        'https://*.i.posthog.com',
+      ].join(' '),
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
+      "object-src 'none'",
     ].join('; '),
   };
 }
@@ -44,10 +56,7 @@ export function middleware(request: NextRequest) {
     }
 
     if (origin && !sameOrigin && !ALLOWED_ORIGINS.includes(origin)) {
-      return NextResponse.json(
-        { success: false, error: 'Forbidden origin' },
-        { status: 403 }
-      );
+      return NextResponse.json({ success: false, error: 'Forbidden origin' }, { status: 403 });
     }
   }
 
@@ -74,7 +83,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

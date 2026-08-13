@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { PayMethod, Product } from '@/lib/data';
 import { QRCodeSVG } from 'qrcode.react';
+import { track } from '@/lib/analytics';
 
 const COIN_INFO: Record<PayMethod, { name: string; color: string; network: string }> = {
   BTC: { name: 'Bitcoin', color: '#F7931A', network: 'BTC' },
@@ -236,6 +237,10 @@ export default function CheckoutModal({
             if (order.downloadAvailable && order.downloadToken) {
               setDownloadToken(order.downloadToken);
             }
+            track('payment_confirmed', {
+              order_id: paymentData.orderId,
+              status: order.status,
+            });
             setStep('confirmed');
             clearInterval(pollInterval);
           }
@@ -284,6 +289,8 @@ export default function CheckoutModal({
       setError('Please enter a valid email');
       return;
     }
+
+    track('checkout_email_entered', { product_id: checkout.id, quantity, coin: payMethod });
 
     if (quantity < 1) {
       setError('Quantity must be at least 1');
@@ -338,6 +345,16 @@ export default function CheckoutModal({
         mockMode: data.data.mockMode || false,
       };
       setPaymentData(newPaymentData);
+
+      // The buyer now has an address to send funds to — everything after this
+      // is out of our hands, so it's the last step we control.
+      track('payment_address_shown', {
+        product_id: checkout.id,
+        quantity,
+        coin: payMethod,
+        amount_usd: data.data.priceAmount,
+        promo_applied: Boolean(data.data.discount),
+      });
 
       setStep(newPaymentData.mockMode ? 'waiting' : 'payment');
       setLoading(false);
