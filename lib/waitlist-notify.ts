@@ -10,7 +10,6 @@
 import { query } from './db';
 import { sendRestockEmail } from './email';
 
-
 export interface NotifyResult {
   pending: number;
   emailed: number;
@@ -29,7 +28,11 @@ export async function notifyWaitlist(productId: string): Promise<NotifyResult> {
   const product = products[0];
   const priceLabel = `$${(product.price / 100).toFixed(0)}`;
 
-  const entries = await query<{ id: string; email: string | null; telegram_username: string | null }>(
+  const entries = await query<{
+    id: string;
+    email: string | null;
+    telegram_username: string | null;
+  }>(
     `SELECT id, email, telegram_username
      FROM waitlist
      WHERE product_id = $1 AND notified = false`,
@@ -71,14 +74,11 @@ export async function notifyWaitlist(productId: string): Promise<NotifyResult> {
     [productId, via]
   );
 
-  await query(
-    `INSERT INTO logs (type, message) VALUES ('delivery', $1)`,
-    [
-      `Restock notify — ${product.name}: ${entries.length} on waitlist, ${emailed} emailed` +
-        (emailFailed ? ` (${emailFailed} failed)` : '') +
-        `, Telegram ${telegram}`,
-    ]
-  );
+  await query(`INSERT INTO logs (type, message) VALUES ('delivery', $1)`, [
+    `Restock notify — ${product.name}: ${entries.length} on waitlist, ${emailed} emailed` +
+      (emailFailed ? ` (${emailFailed} failed)` : '') +
+      `, Telegram ${telegram}`,
+  ]);
 
   return { pending: entries.length, emailed, emailFailed, telegram };
 }

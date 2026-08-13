@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { releaseExpiredReservations, getReservationTimeoutMinutes } from '@/lib/reservations';
+import { sendRecoveryEmails } from '@/lib/recovery';
 
 /**
  * GET /api/cron/release-reservations
@@ -23,8 +24,16 @@ export async function GET(request: NextRequest) {
 
   const released = await releaseExpiredReservations();
 
+  // Expiring a checkout is what creates a recovery candidate, so the reminder
+  // pass runs straight after the sweep.
+  const recovery = await sendRecoveryEmails();
+
   return NextResponse.json({
     success: true,
-    data: { released, timeoutMinutes: getReservationTimeoutMinutes() },
+    data: {
+      released,
+      timeoutMinutes: getReservationTimeoutMinutes(),
+      recoveryEmailsSent: recovery.sent,
+    },
   });
 }

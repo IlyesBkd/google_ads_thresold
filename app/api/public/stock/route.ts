@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
-import { query } from "@/lib/db";
-import { releaseExpiredReservations } from "@/lib/reservations";
+import { NextResponse } from 'next/server';
+import { query } from '@/lib/db';
+import { releaseExpiredReservations } from '@/lib/reservations';
 
 export async function GET() {
   try {
@@ -24,7 +24,7 @@ export async function GET() {
 
     // Ensure all active products have entries (even if 0)
     const activeProducts = await query<{ id: string }>(
-      "SELECT id FROM products WHERE active = true"
+      'SELECT id FROM products WHERE active = true'
     );
     for (const p of activeProducts) {
       if (!stock[p.id]) stock[p.id] = 0;
@@ -35,11 +35,11 @@ export async function GET() {
       data: stock,
     });
   } catch (error) {
-    console.error("Failed to fetch stock:", error);
+    console.error('Failed to fetch stock:', error);
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to fetch stock",
+        error: 'Failed to fetch stock',
       },
       { status: 500 }
     );

@@ -137,3 +137,48 @@ body {
 .cta-discord:hover {
   background: #5a95f5;
 }
+
+/* ─── Legal pages (terms / refunds / privacy) ─────────────────────────────── */
+.legal-body {
+  font-size: 15px;
+  line-height: 1.75;
+  color: #9a9a9a;
+}
+.legal-body h2 {
+  font-size: 19px;
+  font-weight: 600;
+  color: #fafafa;
+  letter-spacing: -0.01em;
+  margin: 38px 0 12px;
+}
+.legal-body h2:first-child {
+  margin-top: 0;
+}
+.legal-body p {
+  margin: 0 0 14px;
+}
+.legal-body ul {
+  margin: 0 0 14px;
+  padding-left: 20px;
+}
+.legal-body li {
+  margin-bottom: 8px;
+}
+.legal-body strong {
+  color: #fafafa;
+  font-weight: 600;
+}
+.legal-body a {
+  color: #4285f4;
+}
+/* Placeholder awaiting the operator's real company details. */
+.legal-body .todo {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: rgba(251, 188, 4, 0.12);
+  border: 1px solid rgba(251, 188, 4, 0.35);
+  color: #fbbc04;
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+}

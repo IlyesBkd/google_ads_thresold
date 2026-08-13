@@ -30,22 +30,19 @@ const CACHE_TTL = 60 * 1000; // 60 seconds
 export async function getLiveCryptoRates(): Promise<CryptoRates> {
   // Return cached rates if still valid
   const now = Date.now();
-  if (cachedRates && (now - cacheTimestamp) < CACHE_TTL) {
+  if (cachedRates && now - cacheTimestamp < CACHE_TTL) {
     return cachedRates;
   }
 
   try {
     // Fetch from CoinGecko API
-    const response = await fetch(
-      `${COINGECKO_API}?ids=bitcoin,ethereum,tether&vs_currencies=usd`,
-      {
-        headers: {
-          'Accept': 'application/json',
-        },
-        // Cache for 60 seconds
-        next: { revalidate: 60 },
-      }
-    );
+    const response = await fetch(`${COINGECKO_API}?ids=bitcoin,ethereum,tether&vs_currencies=usd`, {
+      headers: {
+        Accept: 'application/json',
+      },
+      // Cache for 60 seconds
+      next: { revalidate: 60 },
+    });
 
     if (!response.ok) {
       throw new Error(`CoinGecko API error: ${response.status}`);

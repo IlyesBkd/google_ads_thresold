@@ -12,19 +12,13 @@ export async function POST(request: NextRequest) {
     const { orderId } = await request.json();
 
     if (!orderId) {
-      return NextResponse.json(
-        { success: false, error: 'Order ID is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: 'Order ID is required' }, { status: 400 });
     }
 
     const result = await deliverOrder(orderId, payload.adminId);
 
     if (!result.success) {
-      return NextResponse.json(
-        { success: false, error: result.error },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: result.error }, { status: 400 });
     }
 
     return NextResponse.json({
@@ -38,15 +32,9 @@ export async function POST(request: NextRequest) {
     console.error('Deliver order error:', error);
 
     if (getErrorMessage(error)?.includes('Unauthorized')) {
-      return NextResponse.json(
-        { success: false, error: getErrorMessage(error) },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: getErrorMessage(error) }, { status: 401 });
     }
 
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

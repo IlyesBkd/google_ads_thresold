@@ -8,15 +8,12 @@ function getApiKey() {
 
 function getApiUrl() {
   const useSandbox = process.env.NOWPAYMENTS_SANDBOX === 'true';
-  return useSandbox
-    ? 'https://api-sandbox.nowpayments.io/v1'
-    : 'https://api.nowpayments.io/v1';
+  return useSandbox ? 'https://api-sandbox.nowpayments.io/v1' : 'https://api.nowpayments.io/v1';
 }
 
 function isMockMode() {
   const key = getApiKey();
-  return process.env.NODE_ENV !== 'production' &&
-    (!key || key === 'your-crypto-gateway-api-key');
+  return process.env.NODE_ENV !== 'production' && (!key || key === 'your-crypto-gateway-api-key');
 }
 
 // NOWPayments uses lowercase currency codes with network suffix
@@ -158,10 +155,7 @@ export async function getPaymentStatus(
  * 3. HMAC-SHA512 with IPN secret
  * 4. Compare with x-nowpayments-sig header
  */
-export function verifyWebhookSignature(
-  rawBody: string,
-  signature: string
-): boolean {
+export function verifyWebhookSignature(rawBody: string, signature: string): boolean {
   if (isMockMode()) {
     return true;
   }
@@ -197,16 +191,16 @@ export function verifyWebhookSignature(
 }
 
 function sortObject(obj: Record<string, unknown>): Record<string, unknown> {
-  return Object.keys(obj).sort().reduce(
-    (result: Record<string, unknown>, key: string) => {
+  return Object.keys(obj)
+    .sort()
+    .reduce((result: Record<string, unknown>, key: string) => {
       const value = obj[key];
-      result[key] = (value && typeof value === 'object' && !Array.isArray(value))
-        ? sortObject(value as Record<string, unknown>)
-        : value;
+      result[key] =
+        value && typeof value === 'object' && !Array.isArray(value)
+          ? sortObject(value as Record<string, unknown>)
+          : value;
       return result;
-    },
-    {}
-  );
+    }, {});
 }
 
 // ─── MOCK IMPLEMENTATION (for development) ───────────────────────────────────
@@ -229,7 +223,9 @@ async function createMockPayment(
   const expiresAt = new Date();
   expiresAt.setMinutes(expiresAt.getMinutes() + 30);
 
-  console.log(`🎭 MOCK PAYMENT: ${paymentId} | $${params.priceAmount} → ${payAmount.toFixed(8)} ${upperCoin}`);
+  console.log(
+    `🎭 MOCK PAYMENT: ${paymentId} | $${params.priceAmount} → ${payAmount.toFixed(8)} ${upperCoin}`
+  );
 
   return {
     success: true,

@@ -1,14 +1,14 @@
-import type { Product } from "@/lib/data";
-import Image from "next/image";
+import type { Product } from '@/lib/data';
+import Image from 'next/image';
 
 function Check() {
   return (
     <span
       style={{
         flexShrink: 0,
-        marginTop: "1px",
-        color: "#4285F4",
-        display: "inline-flex",
+        marginTop: '1px',
+        color: '#4285F4',
+        display: 'inline-flex',
       }}
     >
       <svg
@@ -39,41 +39,40 @@ export default function ProductCard({
   return (
     <div
       style={{
-        position: "relative",
-        display: "flex",
-        flexDirection: "column",
-        padding: "24px",
-        background: "#0C0C0C",
-        border: "1px solid rgba(255,255,255,0.08)",
-        borderRadius: "18px",
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '24px',
+        background: '#0C0C0C',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '18px',
       }}
     >
       {product.popular && (
         <>
           <div
             style={{
-              position: "absolute",
-              inset: "-1px",
-              border: "1px solid rgba(66,133,244,0.5)",
-              borderRadius: "18px",
-              boxShadow:
-                "0 0 0 1px rgba(66,133,244,0.12),0 24px 70px -28px rgba(66,133,244,0.45)",
-              pointerEvents: "none",
+              position: 'absolute',
+              inset: '-1px',
+              border: '1px solid rgba(66,133,244,0.5)',
+              borderRadius: '18px',
+              boxShadow: '0 0 0 1px rgba(66,133,244,0.12),0 24px 70px -28px rgba(66,133,244,0.45)',
+              pointerEvents: 'none',
             }}
           />
           <div
             style={{
-              position: "absolute",
-              top: "-11px",
-              left: "28px",
-              padding: "5px 12px",
-              background: "#4285F4",
-              borderRadius: "999px",
-              fontSize: "11px",
+              position: 'absolute',
+              top: '-11px',
+              left: '28px',
+              padding: '5px 12px',
+              background: '#4285F4',
+              borderRadius: '999px',
+              fontSize: '11px',
               fontWeight: 600,
-              letterSpacing: "0.04em",
-              color: "#fff",
-              fontFamily: "var(--font-mono), monospace",
+              letterSpacing: '0.04em',
+              color: '#fff',
+              fontFamily: 'var(--font-mono), monospace',
             }}
           >
             MOST POPULAR
@@ -83,51 +82,56 @@ export default function ProductCard({
 
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          position: "relative",
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          position: 'relative',
         }}
       >
         <Image src="/google-ads.png" alt="Google Ads" width={36} height={36} />
         <span
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "5px 10px",
-            background: stock === 0 ? "rgba(234,67,53,0.1)" : "rgba(52,168,83,0.1)",
-            border: stock === 0 ? "1px solid rgba(234,67,53,0.25)" : "1px solid rgba(52,168,83,0.25)",
-            borderRadius: "999px",
-            fontSize: "11px",
-            color: stock === 0 ? "#F28B82" : "#5BD17E",
-            fontFamily: "var(--font-mono), monospace",
-            letterSpacing: "0.03em",
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '5px 10px',
+            background: stock === 0 ? 'rgba(234,67,53,0.1)' : 'rgba(52,168,83,0.1)',
+            border:
+              stock === 0 ? '1px solid rgba(234,67,53,0.25)' : '1px solid rgba(52,168,83,0.25)',
+            borderRadius: '999px',
+            fontSize: '11px',
+            color: stock === 0 ? '#F28B82' : '#5BD17E',
+            fontFamily: 'var(--font-mono), monospace',
+            letterSpacing: '0.03em',
           }}
         >
           {stock !== undefined && stock > 0 && (
             <span
               className="anim-pulse-dot"
               style={{
-                width: "6px",
-                height: "6px",
-                borderRadius: "50%",
-                background: "#34A853",
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                background: '#34A853',
               }}
             />
           )}
-          {stock === undefined ? "Loading..." : stock === 0 ? "Out of Stock" : `In Stock (${stock} left)`}
+          {stock === undefined
+            ? 'Loading...'
+            : stock === 0
+              ? 'Out of Stock'
+              : `In Stock (${stock} left)`}
         </span>
       </div>
 
       <div
         style={{
-          marginTop: "16px",
-          fontFamily: "var(--font-mono), monospace",
-          fontSize: "11px",
-          letterSpacing: "0.16em",
-          textTransform: "uppercase",
-          color: "#6A6A6A",
+          marginTop: '16px',
+          fontFamily: 'var(--font-mono), monospace',
+          fontSize: '11px',
+          letterSpacing: '0.16em',
+          textTransform: 'uppercase',
+          color: '#6A6A6A',
         }}
       >
         {product.tag}
@@ -135,11 +139,11 @@ export default function ProductCard({
 
       <h3
         style={{
-          margin: "10px 0 0",
-          fontSize: "21px",
+          margin: '10px 0 0',
+          fontSize: '21px',
           fontWeight: 600,
-          letterSpacing: "-0.02em",
-          color: "#F5F5F5",
+          letterSpacing: '-0.02em',
+          color: '#F5F5F5',
           lineHeight: 1.25,
         }}
       >
@@ -148,31 +152,31 @@ export default function ProductCard({
 
       <div
         style={{
-          marginTop: "12px",
-          display: "flex",
-          alignItems: "baseline",
-          gap: "8px",
+          marginTop: '12px',
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: '8px',
         }}
       >
         <span
           style={{
-            fontSize: "44px",
+            fontSize: '44px',
             fontWeight: 600,
-            letterSpacing: "-0.03em",
-            color: "#FAFAFA",
+            letterSpacing: '-0.03em',
+            color: '#FAFAFA',
           }}
         >
           {product.price}
         </span>
-        <span style={{ color: "#6A6A6A", fontSize: "14px" }}>one-time</span>
+        <span style={{ color: '#6A6A6A', fontSize: '14px' }}>one-time</span>
       </div>
 
       <p
         style={{
-          margin: "10px 0 0",
-          fontSize: "14px",
+          margin: '10px 0 0',
+          fontSize: '14px',
           lineHeight: 1.55,
-          color: "#9A9A9A",
+          color: '#9A9A9A',
         }}
       >
         {product.desc}
@@ -180,22 +184,22 @@ export default function ProductCard({
 
       <div
         style={{
-          height: "1px",
-          background: "rgba(255,255,255,0.07)",
-          margin: "14px 0",
+          height: '1px',
+          background: 'rgba(255,255,255,0.07)',
+          margin: '14px 0',
         }}
       />
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
         {product.features.map((f) => (
           <div
             key={f}
             style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "10px",
-              fontSize: "13.5px",
-              color: "#C8C8C8",
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '10px',
+              fontSize: '13.5px',
+              color: '#C8C8C8',
               lineHeight: 1.45,
             }}
           >
@@ -205,16 +209,53 @@ export default function ProductCard({
         ))}
       </div>
 
-      <div
+      {/* The objection that blocks the sale is "what if it's dead on arrival" —
+          answer it right above the buy button, not three scrolls away. */}
+      <a
+        href="/refunds"
         style={{
-          marginTop: "16px",
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
+          marginTop: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '9px',
+          padding: '10px 12px',
+          background: 'rgba(52,168,83,0.07)',
+          border: '1px solid rgba(52,168,83,0.22)',
+          borderRadius: '10px',
+          textDecoration: 'none',
         }}
       >
-        <span style={{ fontSize: "12px", color: "#6A6A6A" }}>Pay with</span>
-        <div style={{ display: "flex", gap: "6px" }}>
+        <span style={{ flexShrink: 0, color: '#34A853', display: 'inline-flex' }}>
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <path d="M9 12l2 2 4-4" />
+          </svg>
+        </span>
+        <span style={{ fontSize: '12.5px', color: '#A9D8B8', lineHeight: 1.4 }}>
+          <strong style={{ color: '#34A853', fontWeight: 600 }}>24h guarantee</strong>
+          {' — '}dead or suspended on arrival, we replace it free
+        </span>
+      </a>
+
+      <div
+        style={{
+          marginTop: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+        }}
+      >
+        <span style={{ fontSize: '12px', color: '#6A6A6A' }}>Pay with</span>
+        <div style={{ display: 'flex', gap: '6px' }}>
           <CoinIcon coin="BTC" />
           <CoinIcon coin="ETH" />
           <CoinIcon coin="USDT" />
@@ -225,17 +266,17 @@ export default function ProductCard({
         onClick={onBuy}
         className="btn-buy"
         style={{
-          marginTop: "14px",
-          width: "100%",
-          padding: "13px",
-          background: "#4285F4",
-          color: "#fff",
-          border: "none",
-          borderRadius: "11px",
-          fontSize: "15px",
+          marginTop: '14px',
+          width: '100%',
+          padding: '13px',
+          background: '#4285F4',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '11px',
+          fontSize: '15px',
           fontWeight: 600,
-          cursor: "pointer",
-          fontFamily: "inherit",
+          cursor: 'pointer',
+          fontFamily: 'inherit',
         }}
       >
         Buy Now
@@ -244,8 +285,8 @@ export default function ProductCard({
   );
 }
 
-function CoinIcon({ coin, size = 24 }: { coin: "BTC" | "ETH" | "USDT"; size?: number }) {
-  if (coin === "BTC") {
+function CoinIcon({ coin, size = 24 }: { coin: 'BTC' | 'ETH' | 'USDT'; size?: number }) {
+  if (coin === 'BTC') {
     return (
       <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
         <circle cx="16" cy="16" r="16" fill="#F7931A" />
@@ -256,7 +297,7 @@ function CoinIcon({ coin, size = 24 }: { coin: "BTC" | "ETH" | "USDT"; size?: nu
       </svg>
     );
   }
-  if (coin === "ETH") {
+  if (coin === 'ETH') {
     return (
       <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
         <circle cx="16" cy="16" r="16" fill="#627EEA" />

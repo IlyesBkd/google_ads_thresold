@@ -90,9 +90,6 @@ export async function GET(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     const status = message.includes('Unauthorized') ? 401 : 500;
 
-    return NextResponse.json(
-      { success: false, error: message },
-      { status }
-    );
+    return NextResponse.json({ success: false, error: message }, { status });
   }
 }

@@ -172,9 +172,10 @@ export function formatStockAlert(alert: {
           },
           {
             name: '🔔 Action Required',
-            value: alert.currentStock === 0
-              ? '❗ **Import new stock immediately**'
-              : '⚡ Consider restocking soon',
+            value:
+              alert.currentStock === 0
+                ? '❗ **Import new stock immediately**'
+                : '⚡ Consider restocking soon',
             inline: false,
           },
         ],

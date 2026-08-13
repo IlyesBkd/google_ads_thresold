@@ -1,8 +1,8 @@
 import { getErrorMessage } from '@/lib/errors';
-import { NextRequest, NextResponse } from "next/server";
-import { query } from "@/lib/db";
-import { requireAuth } from "@/lib/jwt";
-import { notifyWaitlist } from "@/lib/waitlist-notify";
+import { NextRequest, NextResponse } from 'next/server';
+import { query } from '@/lib/db';
+import { requireAuth } from '@/lib/jwt';
+import { notifyWaitlist } from '@/lib/waitlist-notify';
 
 // GET: Retrieve all waitlist entries
 export async function GET(request: NextRequest) {
@@ -38,11 +38,11 @@ export async function GET(request: NextRequest) {
       data: rows,
     });
   } catch (error) {
-    console.error("Waitlist fetch error:", error);
+    console.error('Waitlist fetch error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: getErrorMessage(error) || "Failed to fetch waitlist",
+        error: getErrorMessage(error) || 'Failed to fetch waitlist',
       },
       { status: 500 }
     );
@@ -56,26 +56,22 @@ export async function POST(request: NextRequest) {
     const { productId } = await request.json();
 
     if (!productId) {
-      return NextResponse.json(
-        { success: false, error: "productId required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: 'productId required' }, { status: 400 });
     }
 
     const result = await notifyWaitlist(productId);
 
     return NextResponse.json({
       success: true,
-      message:
-        `${result.pending} notified — ${result.emailed} emailed, Telegram ${result.telegram}`,
+      message: `${result.pending} notified — ${result.emailed} emailed, Telegram ${result.telegram}`,
       data: { count: result.pending, ...result },
     });
   } catch (error) {
-    console.error("Waitlist notification error:", error);
+    console.error('Waitlist notification error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: getErrorMessage(error) || "Failed to send notifications",
+        error: getErrorMessage(error) || 'Failed to send notifications',
       },
       { status: 500 }
     );
@@ -87,27 +83,24 @@ export async function DELETE(request: NextRequest) {
   try {
     await requireAuth(request);
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
+    const id = searchParams.get('id');
 
     if (!id) {
-      return NextResponse.json(
-        { success: false, error: "ID required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
     }
 
-    await query("DELETE FROM waitlist WHERE id = $1", [id]);
+    await query('DELETE FROM waitlist WHERE id = $1', [id]);
 
     return NextResponse.json({
       success: true,
-      message: "Waitlist entry deleted",
+      message: 'Waitlist entry deleted',
     });
   } catch (error) {
-    console.error("Waitlist delete error:", error);
+    console.error('Waitlist delete error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: getErrorMessage(error) || "Failed to delete entry",
+        error: getErrorMessage(error) || 'Failed to delete entry',
       },
       { status: 500 }
     );

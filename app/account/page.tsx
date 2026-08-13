@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 interface Order {
   id: string;
@@ -18,28 +18,64 @@ interface Order {
   downloadToken: string | null;
   tokenExpiresAt: string | null;
   tokenUsesLeft: number | null;
+  warrantyHoursLeft: number;
 }
 
+const CLAIM_REASONS: { value: string; label: string }[] = [
+  { value: 'cannot_login', label: 'Credentials do not work' },
+  { value: 'already_suspended', label: 'Account is already suspended' },
+  { value: 'threshold_not_unlocked', label: 'Billing threshold is not unlocked' },
+  { value: 'not_as_described', label: 'Does not match the description' },
+];
+
 const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
-  pending: { color: "#FBBC04", bg: "rgba(251,188,4,0.1)", label: "Pending" },
-  paid: { color: "#4285F4", bg: "rgba(66,133,244,0.1)", label: "Paid" },
-  delivered: { color: "#34A853", bg: "rgba(52,168,83,0.1)", label: "Delivered" },
-  failed: { color: "#EA4335", bg: "rgba(234,67,53,0.1)", label: "Failed" },
-  refunded: { color: "#9A9A9A", bg: "rgba(154,154,154,0.1)", label: "Refunded" },
+  pending: { color: '#FBBC04', bg: 'rgba(251,188,4,0.1)', label: 'Pending' },
+  paid: { color: '#4285F4', bg: 'rgba(66,133,244,0.1)', label: 'Paid' },
+  delivered: { color: '#34A853', bg: 'rgba(52,168,83,0.1)', label: 'Delivered' },
+  failed: { color: '#EA4335', bg: 'rgba(234,67,53,0.1)', label: 'Failed' },
+  refunded: { color: '#9A9A9A', bg: 'rgba(154,154,154,0.1)', label: 'Refunded' },
 };
 
 export default function AccountPage() {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
-  const [phase, setPhase] = useState<"email" | "code" | "verified">("email");
-  const [code, setCode] = useState("");
+  const [phase, setPhase] = useState<'email' | 'code' | 'verified'>('email');
+  const [code, setCode] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
+  const [claimFor, setClaimFor] = useState<string | null>(null);
+  const [claimReason, setClaimReason] = useState(CLAIM_REASONS[0].value);
+  const [claimDetails, setClaimDetails] = useState('');
+
+  const submitClaim = async (orderId: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/orders/warranty', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, reason: claimReason, details: claimDetails }),
+      });
+      const data = await response.json();
+
+      if (!data.success) {
+        setError(data.error || 'Could not file the claim');
+      } else {
+        setClaimFor(null);
+        setClaimDetails('');
+        setNotice(data.message || 'Claim received.');
+      }
+    } catch {
+      setError('Network error. Please try again.');
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const savedEmail = localStorage.getItem("gadscale_customer_email");
+    const savedEmail = localStorage.getItem('gadscale_customer_email');
     if (savedEmail) setEmail(savedEmail);
   }, []);
 
@@ -47,34 +83,34 @@ export default function AccountPage() {
   // orders instead of asking for another code.
   useEffect(() => {
     (async () => {
-      const response = await fetch("/api/orders/by-email");
+      const response = await fetch('/api/orders/by-email');
       if (!response.ok) return;
       const data = await response.json();
       if (data.success) {
         setOrders(data.data.orders);
         setEmail(data.data.email);
-        setPhase("verified");
+        setPhase('verified');
         setSearched(true);
       }
     })().catch(() => {});
   }, []);
 
   const loadOrders = async () => {
-    const response = await fetch("/api/orders/by-email");
+    const response = await fetch('/api/orders/by-email');
     const data = await response.json();
     if (data.success) {
       setOrders(data.data.orders);
-      setPhase("verified");
-      localStorage.setItem("gadscale_customer_email", email);
+      setPhase('verified');
+      localStorage.setItem('gadscale_customer_email', email);
     } else {
-      setError(data.error || "Failed to fetch orders");
+      setError(data.error || 'Failed to fetch orders');
       setOrders([]);
     }
   };
 
   const handleRequestCode = async () => {
-    if (!email || !email.includes("@")) {
-      setError("Please enter a valid email address");
+    if (!email || !email.includes('@')) {
+      setError('Please enter a valid email address');
       return;
     }
 
@@ -83,28 +119,30 @@ export default function AccountPage() {
     setNotice(null);
 
     try {
-      const response = await fetch("/api/orders/request-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/orders/request-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
       const data = await response.json();
 
       if (!data.success) {
-        setError(data.error || "Could not send a code. Try again.");
+        setError(data.error || 'Could not send a code. Try again.');
       } else {
-        setPhase("code");
-        setNotice(`If ${email} has orders, a 6-digit code is on its way. It expires in 10 minutes.`);
+        setPhase('code');
+        setNotice(
+          `If ${email} has orders, a 6-digit code is on its way. It expires in 10 minutes.`
+        );
       }
     } catch {
-      setError("Network error. Please try again.");
+      setError('Network error. Please try again.');
     }
     setLoading(false);
   };
 
   const handleVerifyCode = async () => {
     if (!/^\d{6}$/.test(code.trim())) {
-      setError("Enter the 6-digit code from your email");
+      setError('Enter the 6-digit code from your email');
       return;
     }
 
@@ -113,168 +151,208 @@ export default function AccountPage() {
     setSearched(true);
 
     try {
-      const response = await fetch("/api/orders/verify-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/orders/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code: code.trim() }),
       });
       const data = await response.json();
 
       if (!data.success) {
-        setError(data.error || "Incorrect code");
+        setError(data.error || 'Incorrect code');
       } else {
         setNotice(null);
         await loadOrders();
       }
     } catch {
-      setError("Network error. Please try again.");
+      setError('Network error. Please try again.');
     }
     setLoading(false);
   };
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return null;
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
   const getTimeRemaining = (expiresAt: string | null) => {
     if (!expiresAt) return null;
     const diff = new Date(expiresAt).getTime() - Date.now();
-    if (diff <= 0) return "Expired";
+    if (diff <= 0) return 'Expired';
     const hours = Math.floor(diff / (1000 * 60 * 60));
     return hours > 24 ? `${Math.floor(hours / 24)}d left` : `${hours}h left`;
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#080808", color: "#F5F5F5", fontFamily: "var(--font-inter), sans-serif" }}>
-
+    <div
+      style={{
+        minHeight: '100vh',
+        background: '#080808',
+        color: '#F5F5F5',
+        fontFamily: 'var(--font-inter), sans-serif',
+      }}
+    >
       {/* Nav */}
-      <nav style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "18px 24px" }}>
-        <div style={{ maxWidth: "720px", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Link href="/" style={{ fontSize: "15px", fontWeight: 700, color: "#F5F5F5", textDecoration: "none", letterSpacing: "0.5px" }}>
+      <nav style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '18px 24px' }}>
+        <div
+          style={{
+            maxWidth: '720px',
+            margin: '0 auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Link
+            href="/"
+            style={{
+              fontSize: '15px',
+              fontWeight: 700,
+              color: '#F5F5F5',
+              textDecoration: 'none',
+              letterSpacing: '0.5px',
+            }}
+          >
             GADSCALE
           </Link>
-          <Link href="/" style={{ fontSize: "13px", color: "#6A6A6A", textDecoration: "none" }}>
+          <Link href="/" style={{ fontSize: '13px', color: '#6A6A6A', textDecoration: 'none' }}>
             Back to shop
           </Link>
         </div>
       </nav>
 
-      <main style={{ maxWidth: "720px", margin: "0 auto", padding: "48px 24px" }}>
-
+      <main style={{ maxWidth: '720px', margin: '0 auto', padding: '48px 24px' }}>
         {/* Title */}
-        <div style={{ marginBottom: "36px" }}>
-          <h1 style={{ fontSize: "28px", fontWeight: 600, letterSpacing: "-0.02em", marginBottom: "8px" }}>
+        <div style={{ marginBottom: '36px' }}>
+          <h1
+            style={{
+              fontSize: '28px',
+              fontWeight: 600,
+              letterSpacing: '-0.02em',
+              marginBottom: '8px',
+            }}
+          >
             My Orders
           </h1>
-          <p style={{ fontSize: "14px", color: "#6A6A6A" }}>
+          <p style={{ fontSize: '14px', color: '#6A6A6A' }}>
             Track your orders and download account credentials.
           </p>
         </div>
 
         {/* Step 1 — ask for the address */}
-        {phase === "email" && (
-          <div style={{ display: "flex", gap: "10px", marginBottom: "36px" }}>
+        {phase === 'email' && (
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '36px' }}>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleRequestCode()}
+              onKeyDown={(e) => e.key === 'Enter' && handleRequestCode()}
               placeholder="Enter your email"
               disabled={loading}
               style={{
                 flex: 1,
-                padding: "14px 16px",
-                background: "#111",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: "12px",
-                color: "#F5F5F5",
-                fontSize: "14px",
-                fontFamily: "inherit",
-                outline: "none",
+                padding: '14px 16px',
+                background: '#111',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '12px',
+                color: '#F5F5F5',
+                fontSize: '14px',
+                fontFamily: 'inherit',
+                outline: 'none',
               }}
             />
             <button
               onClick={handleRequestCode}
               disabled={loading || !email}
               style={{
-                padding: "14px 24px",
-                background: loading || !email ? "#1a3a6a" : "#4285F4",
-                color: "#fff",
-                border: "none",
-                borderRadius: "12px",
-                fontSize: "14px",
+                padding: '14px 24px',
+                background: loading || !email ? '#1a3a6a' : '#4285F4',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '14px',
                 fontWeight: 600,
-                cursor: loading || !email ? "not-allowed" : "pointer",
-                fontFamily: "inherit",
+                cursor: loading || !email ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit',
                 opacity: loading || !email ? 0.6 : 1,
-                whiteSpace: "nowrap",
+                whiteSpace: 'nowrap',
               }}
             >
-              {loading ? "..." : "Send code"}
+              {loading ? '...' : 'Send code'}
             </button>
           </div>
         )}
 
         {/* Step 2 — the code from the email */}
-        {phase === "code" && (
-          <div style={{ marginBottom: "36px" }}>
-            <div style={{ display: "flex", gap: "10px" }}>
+        {phase === 'code' && (
+          <div style={{ marginBottom: '36px' }}>
+            <div style={{ display: 'flex', gap: '10px' }}>
               <input
                 type="text"
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 maxLength={6}
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                onKeyDown={(e) => e.key === "Enter" && handleVerifyCode()}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}
                 placeholder="000000"
                 disabled={loading}
                 autoFocus
                 style={{
                   flex: 1,
-                  padding: "14px 16px",
-                  background: "#111",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: "12px",
-                  color: "#F5F5F5",
-                  fontSize: "20px",
-                  letterSpacing: "0.35em",
-                  fontFamily: "var(--font-mono), monospace",
-                  outline: "none",
+                  padding: '14px 16px',
+                  background: '#111',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '12px',
+                  color: '#F5F5F5',
+                  fontSize: '20px',
+                  letterSpacing: '0.35em',
+                  fontFamily: 'var(--font-mono), monospace',
+                  outline: 'none',
                 }}
               />
               <button
                 onClick={handleVerifyCode}
                 disabled={loading || code.length !== 6}
                 style={{
-                  padding: "14px 24px",
-                  background: loading || code.length !== 6 ? "#1a3a6a" : "#4285F4",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "12px",
-                  fontSize: "14px",
+                  padding: '14px 24px',
+                  background: loading || code.length !== 6 ? '#1a3a6a' : '#4285F4',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '14px',
                   fontWeight: 600,
-                  cursor: loading || code.length !== 6 ? "not-allowed" : "pointer",
-                  fontFamily: "inherit",
+                  cursor: loading || code.length !== 6 ? 'not-allowed' : 'pointer',
+                  fontFamily: 'inherit',
                   opacity: loading || code.length !== 6 ? 0.6 : 1,
-                  whiteSpace: "nowrap",
+                  whiteSpace: 'nowrap',
                 }}
               >
-                {loading ? "..." : "Verify"}
+                {loading ? '...' : 'Verify'}
               </button>
             </div>
             <button
-              onClick={() => { setPhase("email"); setCode(""); setError(null); setNotice(null); }}
+              onClick={() => {
+                setPhase('email');
+                setCode('');
+                setError(null);
+                setNotice(null);
+              }}
               style={{
-                marginTop: "12px", background: "none", border: "none", padding: 0,
-                color: "#6A6A6A", fontSize: "13px", cursor: "pointer", fontFamily: "inherit",
-                textDecoration: "underline",
+                marginTop: '12px',
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                color: '#6A6A6A',
+                fontSize: '13px',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                textDecoration: 'underline',
               }}
             >
               Use a different email
@@ -284,26 +362,61 @@ export default function AccountPage() {
 
         {/* Notice */}
         {notice && (
-          <div style={{ marginBottom: "24px", padding: "14px 16px", background: "rgba(66,133,244,0.06)", border: "1px solid rgba(66,133,244,0.15)", borderRadius: "12px", fontSize: "13px", color: "#9CC0FF" }}>
+          <div
+            style={{
+              marginBottom: '24px',
+              padding: '14px 16px',
+              background: 'rgba(66,133,244,0.06)',
+              border: '1px solid rgba(66,133,244,0.15)',
+              borderRadius: '12px',
+              fontSize: '13px',
+              color: '#9CC0FF',
+            }}
+          >
             {notice}
           </div>
         )}
 
         {/* Error */}
         {error && (
-          <div style={{ marginBottom: "24px", padding: "14px 16px", background: "rgba(234,67,53,0.06)", border: "1px solid rgba(234,67,53,0.15)", borderRadius: "12px", fontSize: "13px", color: "#EA4335" }}>
+          <div
+            style={{
+              marginBottom: '24px',
+              padding: '14px 16px',
+              background: 'rgba(234,67,53,0.06)',
+              border: '1px solid rgba(234,67,53,0.15)',
+              borderRadius: '12px',
+              fontSize: '13px',
+              color: '#EA4335',
+            }}
+          >
             {error}
           </div>
         )}
 
         {/* Empty state */}
         {searched && !loading && orders.length === 0 && !error && (
-          <div style={{ textAlign: "center", padding: "60px 20px" }}>
-            <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: "24px" }}>
+          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px',
+                fontSize: '24px',
+              }}
+            >
               📦
             </div>
-            <div style={{ fontSize: "16px", fontWeight: 600, marginBottom: "8px" }}>No orders found</div>
-            <p style={{ fontSize: "13px", color: "#6A6A6A", maxWidth: "340px", margin: "0 auto" }}>
+            <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>
+              No orders found
+            </div>
+            <p style={{ fontSize: '13px', color: '#6A6A6A', maxWidth: '340px', margin: '0 auto' }}>
               No orders for this email. Make sure you're using the same one from checkout.
             </p>
           </div>
@@ -311,81 +424,284 @@ export default function AccountPage() {
 
         {/* Orders list */}
         {orders.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {orders.map((order) => {
               const status = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
               return (
                 <div
                   key={order.id}
                   style={{
-                    background: "#0C0C0C",
-                    border: "1px solid rgba(255,255,255,0.06)",
-                    borderRadius: "14px",
-                    padding: "20px",
+                    background: '#0C0C0C',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: '14px',
+                    padding: '20px',
                   }}
                 >
                   {/* Top row */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '14px',
+                    }}
+                  >
                     <div>
-                      <div style={{ fontSize: "15px", fontWeight: 600, marginBottom: "4px" }}>
+                      <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: '4px' }}>
                         {order.productName || `Order`}
-                        {order.quantity > 1 && <span style={{ color: "#6A6A6A", fontWeight: 400 }}> ×{order.quantity}</span>}
+                        {order.quantity > 1 && (
+                          <span style={{ color: '#6A6A6A', fontWeight: 400 }}>
+                            {' '}
+                            ×{order.quantity}
+                          </span>
+                        )}
                       </div>
-                      <div style={{ fontSize: "11px", fontFamily: "var(--font-mono), monospace", color: "#4A4A4A" }}>
+                      <div
+                        style={{
+                          fontSize: '11px',
+                          fontFamily: 'var(--font-mono), monospace',
+                          color: '#4A4A4A',
+                        }}
+                      >
                         {order.id.substring(0, 12)}
                       </div>
                     </div>
-                    <span style={{ fontSize: "11px", fontWeight: 600, color: status.color, background: status.bg, padding: "4px 10px", borderRadius: "6px" }}>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: status.color,
+                        background: status.bg,
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                      }}
+                    >
                       {status.label}
                     </span>
                   </div>
 
                   {/* Info row */}
-                  <div style={{ display: "flex", gap: "24px", fontSize: "13px", color: "#6A6A6A", marginBottom: "14px" }}>
-                    <span>${(order.amount / 100).toFixed(0)} {order.coin}</span>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '24px',
+                      fontSize: '13px',
+                      color: '#6A6A6A',
+                      marginBottom: '14px',
+                    }}
+                  >
+                    <span>
+                      ${(order.amount / 100).toFixed(0)} {order.coin}
+                    </span>
                     <span>{formatDate(order.createdAt)}</span>
                   </div>
 
-                  {/* Download button */}
-                  {order.status === "delivered" && order.downloadAvailable && order.downloadToken && (
-                    <div>
-                      <Link
-                        href={`/download/${order.downloadToken}`}
-                        style={{
-                          display: "block",
-                          width: "100%",
-                          padding: "12px",
-                          background: "#4285F4",
-                          color: "#fff",
-                          borderRadius: "10px",
-                          fontSize: "13px",
-                          fontWeight: 600,
-                          textAlign: "center",
-                          textDecoration: "none",
-                        }}
-                      >
-                        Download credentials
-                      </Link>
-                      <div style={{ marginTop: "8px", textAlign: "center", fontSize: "11px", color: "#4A4A4A" }}>
-                        {order.tokenUsesLeft !== null && order.tokenUsesLeft > 0
-                          ? `${order.tokenUsesLeft} download${order.tokenUsesLeft > 1 ? "s" : ""} left`
-                          : "No downloads left"}
-                        {" · "}
-                        {getTimeRemaining(order.tokenExpiresAt)}
-                      </div>
+                  {/* Guarantee — only while the window is open */}
+                  {order.status === 'delivered' && order.warrantyHoursLeft > 0 && (
+                    <div style={{ marginBottom: '14px' }}>
+                      {claimFor !== order.id ? (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '12px',
+                            padding: '10px 12px',
+                            background: 'rgba(52,168,83,0.07)',
+                            border: '1px solid rgba(52,168,83,0.2)',
+                            borderRadius: '10px',
+                          }}
+                        >
+                          <span style={{ fontSize: '12.5px', color: '#A9D8B8' }}>
+                            Guarantee active —{' '}
+                            <strong style={{ color: '#34A853' }}>
+                              {order.warrantyHoursLeft}h left
+                            </strong>
+                          </span>
+                          <button
+                            onClick={() => {
+                              setClaimFor(order.id);
+                              setError(null);
+                              setNotice(null);
+                            }}
+                            style={{
+                              background: 'none',
+                              border: '1px solid rgba(52,168,83,0.35)',
+                              color: '#34A853',
+                              padding: '5px 11px',
+                              borderRadius: '7px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              fontFamily: 'inherit',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            Report a problem
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            padding: '14px',
+                            background: '#111',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '10px',
+                          }}
+                        >
+                          <div
+                            style={{ fontSize: '12.5px', color: '#9A9A9A', marginBottom: '10px' }}
+                          >
+                            What went wrong?
+                          </div>
+                          <select
+                            value={claimReason}
+                            onChange={(e) => setClaimReason(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              background: '#0C0C0C',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '8px',
+                              color: '#F5F5F5',
+                              fontSize: '13px',
+                              fontFamily: 'inherit',
+                              marginBottom: '10px',
+                            }}
+                          >
+                            {CLAIM_REASONS.map((r) => (
+                              <option key={r.value} value={r.value}>
+                                {r.label}
+                              </option>
+                            ))}
+                          </select>
+                          <textarea
+                            value={claimDetails}
+                            onChange={(e) => setClaimDetails(e.target.value)}
+                            placeholder="Anything else that helps us check (optional)"
+                            rows={3}
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              background: '#0C0C0C',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '8px',
+                              color: '#F5F5F5',
+                              fontSize: '13px',
+                              fontFamily: 'inherit',
+                              resize: 'vertical',
+                              marginBottom: '10px',
+                            }}
+                          />
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              onClick={() => submitClaim(order.id)}
+                              disabled={loading}
+                              style={{
+                                flex: 1,
+                                padding: '10px',
+                                background: loading ? '#1e5c34' : '#34A853',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                fontFamily: 'inherit',
+                              }}
+                            >
+                              {loading ? '...' : 'Send claim'}
+                            </button>
+                            <button
+                              onClick={() => setClaimFor(null)}
+                              style={{
+                                padding: '10px 16px',
+                                background: 'none',
+                                border: '1px solid rgba(255,255,255,0.12)',
+                                color: '#9A9A9A',
+                                borderRadius: '8px',
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                fontFamily: 'inherit',
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
+                  {/* Download button */}
+                  {order.status === 'delivered' &&
+                    order.downloadAvailable &&
+                    order.downloadToken && (
+                      <div>
+                        <Link
+                          href={`/download/${order.downloadToken}`}
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            padding: '12px',
+                            background: '#4285F4',
+                            color: '#fff',
+                            borderRadius: '10px',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            textAlign: 'center',
+                            textDecoration: 'none',
+                          }}
+                        >
+                          Download credentials
+                        </Link>
+                        <div
+                          style={{
+                            marginTop: '8px',
+                            textAlign: 'center',
+                            fontSize: '11px',
+                            color: '#4A4A4A',
+                          }}
+                        >
+                          {order.tokenUsesLeft !== null && order.tokenUsesLeft > 0
+                            ? `${order.tokenUsesLeft} download${order.tokenUsesLeft > 1 ? 's' : ''} left`
+                            : 'No downloads left'}
+                          {' · '}
+                          {getTimeRemaining(order.tokenExpiresAt)}
+                        </div>
+                      </div>
+                    )}
+
                   {/* Expired download */}
-                  {order.status === "delivered" && !order.downloadAvailable && (
-                    <div style={{ padding: "10px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", fontSize: "12px", color: "#6A6A6A", textAlign: "center" }}>
+                  {order.status === 'delivered' && !order.downloadAvailable && (
+                    <div
+                      style={{
+                        padding: '10px',
+                        background: 'rgba(255,255,255,0.02)',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        color: '#6A6A6A',
+                        textAlign: 'center',
+                      }}
+                    >
                       Download link expired — contact support on Telegram
                     </div>
                   )}
 
                   {/* Pending */}
-                  {order.status === "pending" && (
-                    <div style={{ padding: "10px", background: "rgba(251,188,4,0.04)", border: "1px solid rgba(251,188,4,0.12)", borderRadius: "8px", fontSize: "12px", color: "#E8D9A8", textAlign: "center" }}>
+                  {order.status === 'pending' && (
+                    <div
+                      style={{
+                        padding: '10px',
+                        background: 'rgba(251,188,4,0.04)',
+                        border: '1px solid rgba(251,188,4,0.12)',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        color: '#E8D9A8',
+                        textAlign: 'center',
+                      }}
+                    >
                       Waiting for payment confirmation...
                     </div>
                   )}
@@ -397,17 +713,47 @@ export default function AccountPage() {
 
         {/* Help */}
         {!searched && (
-          <div style={{ marginTop: "24px", padding: "16px 20px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "12px", fontSize: "13px", color: "#6A6A6A", lineHeight: 1.7 }}>
+          <div
+            style={{
+              marginTop: '24px',
+              padding: '16px 20px',
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: '12px',
+              fontSize: '13px',
+              color: '#6A6A6A',
+              lineHeight: 1.7,
+            }}
+          >
             Enter the email you used at checkout to view your orders and download links.
           </div>
         )}
       </main>
 
       {/* Footer */}
-      <footer style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "20px 24px", marginTop: "40px" }}>
-        <div style={{ maxWidth: "720px", margin: "0 auto", textAlign: "center", fontSize: "12px", color: "#4A4A4A" }}>
-          Need help?{" "}
-          <a href="https://t.me/googleads_now" target="_blank" rel="noopener noreferrer" style={{ color: "#4285F4", textDecoration: "none" }}>
+      <footer
+        style={{
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+          padding: '20px 24px',
+          marginTop: '40px',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '720px',
+            margin: '0 auto',
+            textAlign: 'center',
+            fontSize: '12px',
+            color: '#4A4A4A',
+          }}
+        >
+          Need help?{' '}
+          <a
+            href="https://t.me/googleads_now"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#4285F4', textDecoration: 'none' }}
+          >
             Contact us on Telegram
           </a>
         </div>

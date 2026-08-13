@@ -13,7 +13,10 @@ export async function GET(request: NextRequest) {
     await requireAuth(request);
 
     // Fetch all settings
-    const rows = await query<{ key: string; value: string }>('SELECT key, value FROM settings ORDER BY key', []);
+    const rows = await query<{ key: string; value: string }>(
+      'SELECT key, value FROM settings ORDER BY key',
+      []
+    );
 
     // Convert to object format
     const settings: Record<string, string> = {};

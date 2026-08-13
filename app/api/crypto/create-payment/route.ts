@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { execute, queryOne } from '@/lib/db';
 import { createPayment, simulatePaymentConfirmation } from '@/lib/nowpayments';
 import { reserveStock, releaseReservation } from '@/lib/reservations';
+import { computeTotalCents } from '@/lib/pricing';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { Product } from '@/lib/types';
 import { createPaymentSchema } from '@/lib/validation';
@@ -54,11 +55,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Calculate amount (apply -3% discount if promo code valid)
-    let totalAmount = product.price * quantity; // in cents
-    if (validPromoCode) {
-      totalAmount = Math.round(product.price * quantity * 0.97);
-    }
+    // Volume tier and promo code stack. Same helper as the checkout UI, so the
+    // price the buyer was shown is the price that gets invoiced.
+    const {
+      totalCents: totalAmount,
+      volumePercent,
+      totalPercentOff,
+    } = computeTotalCents(product.price, quantity, validPromoCode ? 3 : 0);
 
     // Create order
     const orderId = crypto.randomUUID();
@@ -149,6 +152,8 @@ export async function POST(request: NextRequest) {
         expiresAt: paymentResult.data!.expirationEstimateDate,
         mockMode: isMockMode,
         discount: validPromoCode ? 3 : 0,
+        volumeDiscount: volumePercent,
+        totalDiscount: totalPercentOff,
       },
     });
   } catch (error) {

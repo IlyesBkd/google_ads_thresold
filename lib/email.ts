@@ -57,6 +57,84 @@ export async function sendCredentialsEmail(
 }
 
 /**
+ * Nudge a buyer whose checkout expired without payment.
+ *
+ * Only ever sent once per order, and only when the product is back in stock —
+ * a reminder for something they still cannot buy is just noise.
+ */
+export async function sendAbandonedCheckoutEmail(
+  customerEmail: string,
+  productName: string,
+  priceLabel: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await getResend().emails.send({
+      from: FROM_EMAIL,
+      to: customerEmail,
+      subject: `Still want that ${productName}?`,
+      html: getAbandonedEmailHtml(productName, priceLabel),
+      text: [
+        `You started an order for a ${productName} but the payment never arrived,`,
+        `so the account went back into stock.`,
+        ``,
+        `It's available again at ${priceLabel}: ${APP_URL}`,
+        ``,
+        `Questions? Reply on Telegram — we answer fast.`,
+      ].join('\n'),
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Abandoned checkout email error:', error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+function getAbandonedEmailHtml(productName: string, priceLabel: string) {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Still interested?</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #080808; color: #FAFAFA;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+
+    <div style="text-align: center; margin-bottom: 34px;">
+      <span style="font-size: 20px; font-weight: 600; letter-spacing: -0.02em; color: #F5F5F5;">GADSCALE</span>
+    </div>
+
+    <div style="background: #0C0C0C; border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 32px;">
+      <h1 style="margin: 0 0 16px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; color: #FAFAFA;">
+        Still want it?
+      </h1>
+      <p style="margin: 0 0 22px; font-size: 15px; line-height: 1.6; color: #9A9A9A;">
+        You started an order for a <strong style="color: #FAFAFA;">${productName}</strong> but the
+        payment never came through, so the account went back into stock.
+      </p>
+      <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.6; color: #9A9A9A;">
+        It's available again at <strong style="color: #FAFAFA;">${priceLabel}</strong>, with the
+        billing threshold already unlocked and a 24-hour replacement guarantee.
+      </p>
+
+      <a href="${APP_URL}" style="display: block; width: 100%; padding: 16px; background: #4285F4; color: #fff; text-align: center; text-decoration: none; border-radius: 12px; font-size: 16px; font-weight: 600;">
+        Finish your order
+      </a>
+    </div>
+
+    <p style="margin: 24px 0 0; font-size: 12.5px; line-height: 1.6; color: #6A6A6A; text-align: center;">
+      This is the only reminder we'll send for this order.
+    </p>
+
+  </div>
+</body>
+</html>
+  `.trim();
+}
+
+/**
  * Send the one-time code that unlocks a buyer's order history.
  */
 export async function sendAccessCodeEmail(

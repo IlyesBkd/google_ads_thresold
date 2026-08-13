@@ -16,21 +16,25 @@ if (typeof window === 'undefined' && process.env.NODE_ENV !== 'production') {
     const lib = isHttps ? https : http;
 
     return new Promise((resolve, reject) => {
-      const req = lib.request(url, {
-        method: options?.method || 'GET',
-        headers: options?.headers || {},
-      }, (res: any) => {
-        let data = '';
-        res.on('data', (chunk: any) => data += chunk);
-        res.on('end', () => {
-          resolve({
-            ok: res.statusCode >= 200 && res.statusCode < 300,
-            status: res.statusCode,
-            text: async () => data,
-            json: async () => JSON.parse(data),
-          } as any);
-        });
-      });
+      const req = lib.request(
+        url,
+        {
+          method: options?.method || 'GET',
+          headers: options?.headers || {},
+        },
+        (res: any) => {
+          let data = '';
+          res.on('data', (chunk: any) => (data += chunk));
+          res.on('end', () => {
+            resolve({
+              ok: res.statusCode >= 200 && res.statusCode < 300,
+              status: res.statusCode,
+              text: async () => data,
+              json: async () => JSON.parse(data),
+            } as any);
+          });
+        }
+      );
 
       req.on('error', reject);
       if (options?.body) req.write(options.body);

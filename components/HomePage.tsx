@@ -8,6 +8,7 @@ import Pricing from './Pricing';
 import Faq from './Faq';
 import Footer from './Footer';
 import CheckoutModal from './CheckoutModal';
+import RecentSales from './RecentSales';
 import { track } from '@/lib/analytics';
 
 export default function HomePage({ initialProducts }: { initialProducts: Product[] }) {
@@ -65,6 +66,7 @@ export default function HomePage({ initialProducts }: { initialProducts: Product
       <Navbar showNavLinks={!isMobile} />
       <Hero />
       <Pricing products={products} onBuy={openCheckout} />
+      <RecentSales />
       <Faq faqs={faqs} openFaq={openFaq} onToggle={toggleFaq} />
       <Footer />
 

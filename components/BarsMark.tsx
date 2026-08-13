@@ -1,6 +1,6 @@
-import Image from "next/image";
+import Image from 'next/image';
 
-type Variant = "nav" | "badge" | "card" | "footer";
+type Variant = 'nav' | 'badge' | 'card' | 'footer';
 
 const HEIGHTS: Record<Variant, number> = {
   nav: 32,
@@ -18,8 +18,8 @@ export default function BarsMark({ variant }: { variant: Variant }) {
       alt="GadScale logo"
       width={w}
       height={h}
-      style={{ display: "block", objectFit: "contain" }}
-      priority={variant === "nav"}
+      style={{ display: 'block', objectFit: 'contain' }}
+      priority={variant === 'nav'}
     />
   );
 }

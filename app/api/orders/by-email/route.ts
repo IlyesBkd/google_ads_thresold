@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getVerifiedEmail } from '@/lib/order-access';
+import { hoursRemaining } from '@/lib/warranty';
 
 export async function GET(request: NextRequest) {
   try {
@@ -80,6 +81,7 @@ export async function GET(request: NextRequest) {
         createdAt: order.created_at,
         paidAt: order.paid_at,
         deliveredAt: order.delivered_at,
+        warrantyHoursLeft: hoursRemaining(order.delivered_at),
         downloadAvailable: isTokenValid,
         downloadToken: isTokenValid ? order.download_token : null,
         tokenExpiresAt: order.token_expires_at,

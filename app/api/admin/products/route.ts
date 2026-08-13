@@ -42,10 +42,7 @@ export async function GET(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     const status = message.includes('Unauthorized') ? 401 : 500;
 
-    return NextResponse.json(
-      { success: false, error: message },
-      { status }
-    );
+    return NextResponse.json({ success: false, error: message }, { status });
   }
 }
 
@@ -83,10 +80,11 @@ export async function POST(request: NextRequest) {
     const productId = result[0].id;
 
     // Log the action
-    await query(
-      'INSERT INTO logs (type, message, admin_id) VALUES ($1, $2, $3)',
-      ['import', `Product "${name}" created by ${admin.email}`, admin.adminId]
-    );
+    await query('INSERT INTO logs (type, message, admin_id) VALUES ($1, $2, $3)', [
+      'import',
+      `Product "${name}" created by ${admin.email}`,
+      admin.adminId,
+    ]);
 
     return NextResponse.json({
       success: true,
@@ -95,12 +93,13 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Create product error:', error);
     const message = error instanceof Error ? error.message : 'Internal server error';
-    const status = message.includes('Unauthorized') ? 401 : message.includes('Forbidden') ? 403 : 500;
+    const status = message.includes('Unauthorized')
+      ? 401
+      : message.includes('Forbidden')
+        ? 403
+        : 500;
 
-    return NextResponse.json(
-      { success: false, error: message },
-      { status }
-    );
+    return NextResponse.json({ success: false, error: message }, { status });
   }
 }
 
@@ -117,7 +116,8 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, name, description, price, threshold_value, category, low_stock_alert, active } = body;
+    const { id, name, description, price, threshold_value, category, low_stock_alert, active } =
+      body;
 
     if (!id) {
       return NextResponse.json(
@@ -161,10 +161,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (updates.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'No fields to update' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: 'No fields to update' }, { status: 400 });
     }
 
     updates.push(`updated_at = NOW()`);
@@ -174,17 +171,15 @@ export async function PATCH(request: NextRequest) {
     const rowCount = await execute(updateQuery, values);
 
     if (rowCount === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Product not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
     }
 
     // Log the action
-    await query(
-      'INSERT INTO logs (type, message, admin_id) VALUES ($1, $2, $3)',
-      ['import', `Product ${id} updated by ${admin.email}`, admin.adminId]
-    );
+    await query('INSERT INTO logs (type, message, admin_id) VALUES ($1, $2, $3)', [
+      'import',
+      `Product ${id} updated by ${admin.email}`,
+      admin.adminId,
+    ]);
 
     return NextResponse.json({
       success: true,
@@ -193,12 +188,13 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('Update product error:', error);
     const message = error instanceof Error ? error.message : 'Internal server error';
-    const status = message.includes('Unauthorized') ? 401 : message.includes('Forbidden') ? 403 : 500;
+    const status = message.includes('Unauthorized')
+      ? 401
+      : message.includes('Forbidden')
+        ? 403
+        : 500;
 
-    return NextResponse.json(
-      { success: false, error: message },
-      { status }
-    );
+    return NextResponse.json({ success: false, error: message }, { status });
   }
 }
 
@@ -239,16 +235,14 @@ export async function DELETE(request: NextRequest) {
       );
 
       if (rowCount === 0) {
-        return NextResponse.json(
-          { success: false, error: 'Product not found' },
-          { status: 404 }
-        );
+        return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
       }
 
-      await query(
-        'INSERT INTO logs (type, message, admin_id) VALUES ($1, $2, $3)',
-        ['import', `Product ${id} deactivated by ${admin.email}`, admin.adminId]
-      );
+      await query('INSERT INTO logs (type, message, admin_id) VALUES ($1, $2, $3)', [
+        'import',
+        `Product ${id} deactivated by ${admin.email}`,
+        admin.adminId,
+      ]);
 
       return NextResponse.json({
         success: true,
@@ -256,22 +250,17 @@ export async function DELETE(request: NextRequest) {
       });
     } else {
       // Hard delete - no stock items
-      const rowCount = await execute(
-        'DELETE FROM products WHERE id = $1',
-        [id]
-      );
+      const rowCount = await execute('DELETE FROM products WHERE id = $1', [id]);
 
       if (rowCount === 0) {
-        return NextResponse.json(
-          { success: false, error: 'Product not found' },
-          { status: 404 }
-        );
+        return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
       }
 
-      await query(
-        'INSERT INTO logs (type, message, admin_id) VALUES ($1, $2, $3)',
-        ['import', `Product ${id} deleted by ${admin.email}`, admin.adminId]
-      );
+      await query('INSERT INTO logs (type, message, admin_id) VALUES ($1, $2, $3)', [
+        'import',
+        `Product ${id} deleted by ${admin.email}`,
+        admin.adminId,
+      ]);
 
       return NextResponse.json({
         success: true,
@@ -281,11 +270,12 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error('Delete product error:', error);
     const message = error instanceof Error ? error.message : 'Internal server error';
-    const status = message.includes('Unauthorized') ? 401 : message.includes('Forbidden') ? 403 : 500;
+    const status = message.includes('Unauthorized')
+      ? 401
+      : message.includes('Forbidden')
+        ? 403
+        : 500;
 
-    return NextResponse.json(
-      { success: false, error: message },
-      { status }
-    );
+    return NextResponse.json({ success: false, error: message }, { status });
   }
 }

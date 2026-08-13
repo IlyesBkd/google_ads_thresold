@@ -17,10 +17,7 @@ export async function GET(request: NextRequest) {
     const admin = admins[0];
 
     if (!admin) {
-      return NextResponse.json(
-        { success: false, error: 'Admin not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'Admin not found' }, { status: 404 });
     }
 
     return NextResponse.json({

@@ -1,46 +1,82 @@
-import BarsMark from "./BarsMark";
+import BarsMark from './BarsMark';
 
 export default function Footer() {
   return (
     <footer
       id="support"
       style={{
-        borderTop: "1px solid rgba(255,255,255,0.07)",
-        marginTop: "32px",
+        borderTop: '1px solid rgba(255,255,255,0.07)',
+        marginTop: '32px',
       }}
     >
       <div
         style={{
-          maxWidth: "1120px",
-          margin: "0 auto",
-          padding: "26px 24px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "16px",
-          flexWrap: "wrap",
-          fontSize: "13px",
-          color: "#6A6A6A",
+          maxWidth: '1120px',
+          margin: '0 auto',
+          padding: '26px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '16px',
+          flexWrap: 'wrap',
+          fontSize: '13px',
+          color: '#6A6A6A',
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <BarsMark variant="footer" />
           <span>© 2026 GadScale</span>
         </div>
-        <div style={{ display: "flex", gap: "22px", flexWrap: "wrap" }}>
-          <a href="#pricing" className="footer-link" style={{ color: "#6A6A6A", textDecoration: "none" }}>
+        <div style={{ display: 'flex', gap: '22px', flexWrap: 'wrap' }}>
+          <a
+            href="#pricing"
+            className="footer-link"
+            style={{ color: '#6A6A6A', textDecoration: 'none' }}
+          >
             Pricing
           </a>
-          <a href="#faq" className="footer-link" style={{ color: "#6A6A6A", textDecoration: "none" }}>
+          <a
+            href="#faq"
+            className="footer-link"
+            style={{ color: '#6A6A6A', textDecoration: 'none' }}
+          >
             FAQ
           </a>
-          <a href="/account" className="footer-link" style={{ color: "#6A6A6A", textDecoration: "none" }}>
+          <a
+            href="/account"
+            className="footer-link"
+            style={{ color: '#6A6A6A', textDecoration: 'none' }}
+          >
             My Orders
           </a>
-          <a href="#" className="footer-link" style={{ color: "#6A6A6A", textDecoration: "none" }}>
+          <a
+            href="/terms"
+            className="footer-link"
+            style={{ color: '#6A6A6A', textDecoration: 'none' }}
+          >
             Terms
           </a>
-          <a href="https://t.me/googleads_now" target="_blank" rel="noopener noreferrer" className="footer-link" style={{ color: "#6A6A6A", textDecoration: "none" }}>
+          <a
+            href="/refunds"
+            className="footer-link"
+            style={{ color: '#6A6A6A', textDecoration: 'none' }}
+          >
+            Refunds
+          </a>
+          <a
+            href="/privacy"
+            className="footer-link"
+            style={{ color: '#6A6A6A', textDecoration: 'none' }}
+          >
+            Privacy
+          </a>
+          <a
+            href="https://t.me/googleads_now"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="footer-link"
+            style={{ color: '#6A6A6A', textDecoration: 'none' }}
+          >
             Telegram
           </a>
         </div>

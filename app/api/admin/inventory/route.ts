@@ -57,10 +57,7 @@ export async function GET(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     const status = message.includes('Unauthorized') ? 401 : 500;
 
-    return NextResponse.json(
-      { success: false, error: message },
-      { status }
-    );
+    return NextResponse.json({ success: false, error: message }, { status });
   }
 }
 
@@ -84,7 +81,10 @@ export async function POST(request: NextRequest) {
     //   email|password|totp_secret|recovery_email|proxy
     // The last three fields are optional. For backward compatibility a line
     // without a pipe is still treated as the legacy "email:password" format.
-    const lines = credentials.split('\n').map((line: string) => line.trim()).filter(Boolean);
+    const lines = credentials
+      .split('\n')
+      .map((line: string) => line.trim())
+      .filter(Boolean);
 
     const toImport: Array<{
       email: string;
@@ -109,7 +109,9 @@ export async function POST(request: NextRequest) {
         const parts = line.split('|').map((p: string) => p.trim());
 
         if (parts.length < 2) {
-          errors.push(`Line ${lineNumber}: Invalid format (expected email|password|totp|recovery|proxy)`);
+          errors.push(
+            `Line ${lineNumber}: Invalid format (expected email|password|totp|recovery|proxy)`
+          );
           continue;
         }
 
@@ -123,7 +125,9 @@ export async function POST(request: NextRequest) {
         const idx = line.indexOf(':');
 
         if (idx === -1) {
-          errors.push(`Line ${lineNumber}: Invalid format (expected email|password|totp|recovery|proxy)`);
+          errors.push(
+            `Line ${lineNumber}: Invalid format (expected email|password|totp|recovery|proxy)`
+          );
           continue;
         }
 
@@ -180,23 +184,32 @@ export async function POST(request: NextRequest) {
         await execute(
           `INSERT INTO stock_items (product_id, email, password, totp_secret, recovery_email, proxy, status, google_ads_created_at, promo_expires_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-          [productId, item.email, item.password, item.totpSecret, item.recoveryEmail, item.proxy, 'available', createdDate, expiresDate]
+          [
+            productId,
+            item.email,
+            item.password,
+            item.totpSecret,
+            item.recoveryEmail,
+            item.proxy,
+            'available',
+            createdDate,
+            expiresDate,
+          ]
         );
         addedCount++;
       } catch (err) {
-        errors.push(`Failed to insert ${item.email}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        errors.push(
+          `Failed to insert ${item.email}: ${err instanceof Error ? err.message : 'Unknown error'}`
+        );
       }
     }
 
     // Log the import
-    await query(
-      'INSERT INTO logs (type, message, admin_id) VALUES ($1, $2, $3)',
-      [
-        'import',
-        `Imported ${addedCount} credentials for product ${productId} — ${duplicateCount} duplicates skipped`,
-        admin.adminId,
-      ]
-    );
+    await query('INSERT INTO logs (type, message, admin_id) VALUES ($1, $2, $3)', [
+      'import',
+      `Imported ${addedCount} credentials for product ${productId} — ${duplicateCount} duplicates skipped`,
+      admin.adminId,
+    ]);
 
     // Check stock levels after import (no await - fire and forget)
     checkAndAlertStock(productId).catch((err) => console.error('Stock alert error:', err));
@@ -223,10 +236,7 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     const status = message.includes('Unauthorized') ? 401 : 500;
 
-    return NextResponse.json(
-      { success: false, error: message },
-      { status }
-    );
+    return NextResponse.json({ success: false, error: message }, { status });
   }
 }
 
@@ -243,11 +253,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const body = await request.json();
-    const ids: string[] = Array.isArray(body.ids)
-      ? body.ids
-      : body.id
-        ? [body.id]
-        : [];
+    const ids: string[] = Array.isArray(body.ids) ? body.ids : body.id ? [body.id] : [];
 
     if (ids.length === 0) {
       return NextResponse.json(
@@ -275,14 +281,11 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await query(
-      'INSERT INTO logs (type, message, admin_id) VALUES ($1, $2, $3)',
-      [
-        'import',
-        `${deleted.length} stock item(s) deleted by ${admin.email}${skipped > 0 ? ` — ${skipped} skipped (sold/reserved)` : ''}`,
-        admin.adminId,
-      ]
-    );
+    await query('INSERT INTO logs (type, message, admin_id) VALUES ($1, $2, $3)', [
+      'import',
+      `${deleted.length} stock item(s) deleted by ${admin.email}${skipped > 0 ? ` — ${skipped} skipped (sold/reserved)` : ''}`,
+      admin.adminId,
+    ]);
 
     // Removing stock can drop a product below its threshold (no await - fire and forget)
     const affectedProducts = [...new Set(deleted.map((item) => item.product_id))];
@@ -300,11 +303,12 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error('Delete stock items error:', error);
     const message = error instanceof Error ? error.message : 'Internal server error';
-    const status = message.includes('Unauthorized') ? 401 : message.includes('Forbidden') ? 403 : 500;
+    const status = message.includes('Unauthorized')
+      ? 401
+      : message.includes('Forbidden')
+        ? 403
+        : 500;
 
-    return NextResponse.json(
-      { success: false, error: message },
-      { status }
-    );
+    return NextResponse.json({ success: false, error: message }, { status });
   }
 }

@@ -1,9 +1,16 @@
-import { CSSProperties } from "react";
+import { CSSProperties } from 'react';
 
-export type Page = "dashboard" | "products" | "inventory" | "orders" | "settings" | "logs" | "waitlist";
-export type OrderStatus = "pending" | "paid" | "delivered" | "failed" | "refunded";
-export type CredentialStatus = "available" | "reserved" | "sold" | "error";
-export type LogType = "import" | "sale" | "delivery" | "login" | "error" | "refund";
+export type Page =
+  | 'dashboard'
+  | 'products'
+  | 'inventory'
+  | 'orders'
+  | 'settings'
+  | 'logs'
+  | 'waitlist';
+export type OrderStatus = 'pending' | 'paid' | 'delivered' | 'failed' | 'refunded';
+export type CredentialStatus = 'available' | 'reserved' | 'sold' | 'error';
+export type LogType = 'import' | 'sale' | 'delivery' | 'login' | 'error' | 'refund';
 
 export interface Product {
   id: string;
@@ -75,17 +82,17 @@ export interface WaitlistEntry {
 }
 
 export const COLORS = {
-  bg: "#080808",
-  card: "#0C0C0C",
-  sidebar: "#0A0A0A",
-  border: "rgba(255,255,255,0.08)",
-  primary: "#4285F4",
-  green: "#34A853",
-  red: "#EA4335",
-  yellow: "#FBBC04",
-  text: "#FAFAFA",
-  textSecondary: "#9A9A9A",
-  textMuted: "#6A6A6A",
+  bg: '#080808',
+  card: '#0C0C0C',
+  sidebar: '#0A0A0A',
+  border: 'rgba(255,255,255,0.08)',
+  primary: '#4285F4',
+  green: '#34A853',
+  red: '#EA4335',
+  yellow: '#FBBC04',
+  text: '#FAFAFA',
+  textSecondary: '#9A9A9A',
+  textMuted: '#6A6A6A',
 };
 
 export const statusColor: Record<OrderStatus, string> = {
@@ -104,7 +111,7 @@ export const credentialStatusColor: Record<CredentialStatus, string> = {
 };
 
 export const logTypeColor: Record<LogType, string> = {
-  import: "#8E24AA",
+  import: '#8E24AA',
   sale: COLORS.primary,
   delivery: COLORS.green,
   login: COLORS.textMuted,
@@ -113,7 +120,7 @@ export const logTypeColor: Record<LogType, string> = {
 };
 
 export function maskEmail(email: string): string {
-  const [local, domain] = email.split("@");
+  const [local, domain] = email.split('@');
   if (!domain) return email;
   const prefix = local.slice(0, 3);
   return `${prefix}***@${domain}`;

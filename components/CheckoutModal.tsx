@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { PayMethod, Product } from '@/lib/data';
 import { QRCodeSVG } from 'qrcode.react';
 import { track } from '@/lib/analytics';
+import { computeTotalCents, nextTier } from '@/lib/pricing';
 
 const COIN_INFO: Record<PayMethod, { name: string; color: string; network: string }> = {
   BTC: { name: 'Bitcoin', color: '#F7931A', network: 'BTC' },
@@ -388,7 +389,12 @@ export default function CheckoutModal({
 
   const basePrice = parseInt(checkout.price.replace('$', ''));
   const totalPrice = basePrice * quantity;
-  const discountedPrice = promoApplied ? Math.round(totalPrice * 0.97 * 100) / 100 : totalPrice;
+
+  // Same helper the server charges with, so what's shown is what's invoiced.
+  const pricing = computeTotalCents(basePrice * 100, quantity, promoApplied ? 3 : 0);
+  const discountedPrice = pricing.totalCents / 100;
+  const volumePercent = pricing.volumePercent;
+  const upcomingTier = nextTier(quantity);
 
   const handleWaitlistSubmit = async () => {
     const hasEmail = Boolean(email && email.includes('@'));
@@ -537,7 +543,7 @@ export default function CheckoutModal({
           <div
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}
           >
-            {promoApplied ? (
+            {promoApplied || volumePercent > 0 ? (
               <>
                 <span
                   style={{ fontSize: '14px', color: '#6A6A6A', textDecoration: 'line-through' }}
@@ -552,10 +558,12 @@ export default function CheckoutModal({
                     color: '#34A853',
                   }}
                 >
-                  ${discountedPrice}
+                  ${discountedPrice.toFixed(2).replace(/\.00$/, '')}
                 </span>
                 <span style={{ fontSize: '11px', color: '#34A853', fontWeight: 500 }}>
-                  🎟️ -3% appliqué
+                  {volumePercent > 0 && `📦 -${volumePercent}% volume`}
+                  {volumePercent > 0 && promoApplied && ' · '}
+                  {promoApplied && '🎟️ -3% promo'}
                 </span>
               </>
             ) : (
@@ -572,6 +580,28 @@ export default function CheckoutModal({
             )}
           </div>
         </div>
+
+        {/* One step from a better price — say so, don't make them guess. */}
+        {upcomingTier && availableStock !== null && availableStock >= upcomingTier.minQuantity && (
+          <button
+            onClick={() => setQuantity(upcomingTier.minQuantity)}
+            style={{
+              width: '100%',
+              marginTop: '10px',
+              padding: '10px 12px',
+              background: 'rgba(66,133,244,0.07)',
+              border: '1px dashed rgba(66,133,244,0.32)',
+              borderRadius: '10px',
+              color: '#9CC0FF',
+              fontSize: '12.5px',
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            Take {upcomingTier.minQuantity} and save {upcomingTier.discountPercent}% →
+          </button>
+        )}
 
         {/* Error with Retry */}
         {error && (
