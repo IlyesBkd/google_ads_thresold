@@ -100,12 +100,21 @@ export default function GuidePage() {
 
       <h2>8. Getting help</h2>
       <p>
-        Telegram is the fastest route and the channel we watch continuously:{' '}
+        For the two most common needs — checking an order and getting a new download link — our bot{' '}
+        <a href="https://t.me/gads_scale_bot" target="_blank" rel="noopener noreferrer">
+          @gads_scale_bot
+        </a>{' '}
+        answers instantly, at any hour. Send it <code>/order &lt;your order id&gt;</code> or{' '}
+        <code>/resend &lt;your order id&gt;</code>. A re-sent link always goes to the address on the
+        order, never to whoever asked.
+      </p>
+      <p>
+        For anything else, a human answers at{' '}
         <a href="https://t.me/googleads_now" target="_blank" rel="noopener noreferrer">
           @googleads_now
-        </a>
-        . Have your order ID ready — it is at the top of your credentials file. You can also write
-        to <a href="mailto:gadscale@gmail.com">gadscale@gmail.com</a>.
+        </a>{' '}
+        — have your order ID ready, it is at the top of your credentials file. You can also write to{' '}
+        <a href="mailto:gadscale@gmail.com">gadscale@gmail.com</a>.
       </p>
     </LegalPage>
   );

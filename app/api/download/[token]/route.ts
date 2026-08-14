@@ -129,8 +129,10 @@ FULL GUIDE: ${APP_URL}/guide
    • Claim from ${APP_URL}/account - Order ID: ${orderId}
 
 7. SUPPORT
-   • Telegram: @googleads_now
-   • Email: gadscale@gmail.com with your Order ID
+   • Instant, any hour - our bot @gads_scale_bot:
+       /order ${orderId}
+       /resend ${orderId}
+   • A human: Telegram @googleads_now, or gadscale@gmail.com
    • Response time: Usually within 1-2 hours
 
 ═══════════════════════════════════════════════════════════════════════
