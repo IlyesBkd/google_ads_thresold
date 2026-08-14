@@ -37,3 +37,12 @@ next-env.d.ts
 /_design_handoff
 .vercel
 .env*
+
+# google api credentials (NEVER commit these!)
+/secrets/
+*credentials*.json
+token.json
+
+# local automation scripts — these hold API keys, passwords and TOTP seeds
+# inline, so they must never reach the repository
+dolphin*.py
