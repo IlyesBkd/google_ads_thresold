@@ -86,6 +86,9 @@ export default function LegalPage({
             fontSize: '13px',
           }}
         >
+          <Link href="/guide" style={{ color: '#6A6A6A', textDecoration: 'none' }}>
+            Getting started
+          </Link>
           <Link href="/terms" style={{ color: '#6A6A6A', textDecoration: 'none' }}>
             Terms
           </Link>

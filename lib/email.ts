@@ -269,6 +269,13 @@ function getCredentialsEmailHtml({
 
     <!-- What's inside -->
     <div style="margin-bottom: 32px;">
+      <a href="${APP_URL}/guide" style="display: block; padding: 14px 16px; margin-bottom: 26px; background: rgba(66,133,244,0.07); border: 1px solid rgba(66,133,244,0.22); border-radius: 12px; text-decoration: none;">
+        <span style="display: block; font-size: 14px; font-weight: 600; color: #4285F4; margin-bottom: 4px;">First time with a threshold account?</span>
+        <span style="display: block; font-size: 13px; color: #9A9A9A; line-height: 1.5;">
+          Read the 10-minute setup guide — proxy, first login, 2FA, and securing the account.
+        </span>
+      </a>
+
       <h2 style="font-size: 16px; font-weight: 600; color: #FAFAFA; margin: 0 0 16px;">What's inside the file:</h2>
       <ul style="margin: 0; padding: 0; list-style: none;">
         <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; font-size: 14px; color: #9A9A9A;">
@@ -335,6 +342,9 @@ DOWNLOAD YOUR CREDENTIALS:
 ${downloadUrl}
 
 ⏱️ Important: Download link expires in ${expiresIn} hours. Save the file to a secure location.
+
+📖 Setup guide (proxy, first login, 2FA, securing the account):
+${APP_URL}/guide
 
 WHAT'S INSIDE THE FILE:
 ✓ Google Ads account email

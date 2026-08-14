@@ -50,6 +50,13 @@ export default function Footer() {
             My Orders
           </a>
           <a
+            href="/guide"
+            className="footer-link"
+            style={{ color: '#6A6A6A', textDecoration: 'none' }}
+          >
+            Guide
+          </a>
+          <a
             href="/terms"
             className="footer-link"
             style={{ color: '#6A6A6A', textDecoration: 'none' }}

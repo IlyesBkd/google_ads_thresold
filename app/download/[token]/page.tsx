@@ -205,10 +205,33 @@ export default function DownloadPage() {
           </div>
         </div>
 
+        {/* Straight from the download to what to do next */}
+        <a
+          href="/guide"
+          style={{
+            display: 'block',
+            marginTop: '16px',
+            padding: '14px 16px',
+            background: 'rgba(66,133,244,0.07)',
+            border: '1px solid rgba(66,133,244,0.22)',
+            borderRadius: '12px',
+            textDecoration: 'none',
+          }}
+        >
+          <div
+            style={{ fontSize: '13.5px', fontWeight: 600, color: '#4285F4', marginBottom: '3px' }}
+          >
+            First time with a threshold account? →
+          </div>
+          <div style={{ fontSize: '12.5px', color: '#9A9A9A', lineHeight: 1.5 }}>
+            10-minute setup guide: proxy, first login, 2FA, securing the account.
+          </div>
+        </a>
+
         {/* Footer help */}
         <div style={{ marginTop: '24px', textAlign: 'center' }}>
           <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#9A9A9A' }}>
-            Need help? Check your email for support instructions.
+            Need help? Message us on Telegram at @googleads_now with your order ID.
           </p>
           <a href="/" style={{ fontSize: '13px', color: '#4285F4', textDecoration: 'none' }}>
             ← Back to homepage

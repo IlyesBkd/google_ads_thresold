@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCredentialsForToken } from '@/lib/delivery';
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.gadscale.com';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -93,31 +95,42 @@ Password: ${cred.password}
 
   content += `═══════════════════════════════════════════════════════════════════════
 
-IMPORTANT INSTRUCTIONS:
+FULL GUIDE: ${APP_URL}/guide
 
 1. SECURITY
    • Store this file in a secure location (password manager, encrypted drive)
    • Do NOT share these credentials with anyone
    • Delete this file after saving credentials elsewhere
 
-2. LOGIN
-   • Go to ads.google.com
-   • Use the email and password provided above
-   • You may be asked for 2FA - check the recovery email if provided
+2. PROXY (if a Proxy line appears above)
+   • Configure it BEFORE your first login, and keep using it
+   • Format is ip:port:username:password
 
-3. THRESHOLD
+3. LOGIN
+   • Go to ads.google.com, in a fresh browser profile
+   • Use the email and password provided above
+   • The 2FA Secret is a setup key: paste it into an authenticator app
+     ("enter setup key manually"), which then generates the 6-digit code
+
+4. MAKE IT YOURS — do this on day one
+   • Change the password
+   • Replace the recovery email with one you control
+   • Re-generate 2FA against your own authenticator
+
+5. THRESHOLD
    • This account has a billing threshold unlocked
    • You can spend up to the threshold before Google charges you
-   • Monitor your spend in Google Ads dashboard
+   • It is a billing trigger, not a spending cap - monitor your spend
 
-4. WARRANTY
-   • If credentials don't work on first login, contact support immediately
-   • Include your Order ID: ${orderId}
-   • Replacement warranty valid for 24-48 hours (see product description)
+6. 24-HOUR GUARANTEE
+   • Covers: credentials that don't work, an already-suspended account,
+     a threshold that isn't unlocked, an account not as described
+   • Not covered: suspensions caused by your own campaigns
+   • Claim from ${APP_URL}/account - Order ID: ${orderId}
 
-5. SUPPORT
+7. SUPPORT
    • Telegram: @googleads_now
-   • Email: Reply to the delivery email with your Order ID
+   • Email: gadscale@gmail.com with your Order ID
    • Response time: Usually within 1-2 hours
 
 ═══════════════════════════════════════════════════════════════════════
