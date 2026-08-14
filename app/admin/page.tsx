@@ -57,6 +57,14 @@ export default function AdminPage() {
   // reload puts them back behind the mask.
   const [showCredentials, setShowCredentials] = useState(false);
 
+  // Google Sheets link
+  const [sheetsStatus, setSheetsStatus] = useState<{
+    ok: boolean;
+    title?: string;
+    tabs?: string[];
+    error?: string;
+  } | null>(null);
+
   // Data state
   const [products, setProducts] = useState<Product[]>([]);
   const [credentials, setCredentials] = useState<Credential[]>([]);
@@ -366,6 +374,15 @@ export default function AdminPage() {
       loadAllData();
     }
   }, [loggedIn, loadAllData]);
+
+  // Sheets status is a network round trip to Google, so only check it when the
+  // settings page is actually open.
+  useEffect(() => {
+    if (!loggedIn || currentPage !== 'settings') return;
+    api.getSheetsStatus().then((r) => {
+      if (r.success) setSheetsStatus(r.data as typeof sheetsStatus);
+    });
+  }, [loggedIn, currentPage]);
 
   // Escape key handler
   useEffect(() => {
@@ -1487,6 +1504,40 @@ export default function AdminPage() {
     setLoading(false);
   };
 
+  const loadSheetsStatus = async () => {
+    const response = await api.getSheetsStatus();
+    if (response.success) setSheetsStatus(response.data as typeof sheetsStatus);
+  };
+
+  const runSheetsAction = async (action: string) => {
+    setLoading(true);
+    const response = await api.runSheetsAction(action);
+
+    if (response.success) {
+      if (action === 'import') {
+        const { imported, skipped, errors } = response.data as {
+          imported: number;
+          skipped: number;
+          errors: string[];
+        };
+        showToast(
+          errors.length > 0
+            ? `${imported} imported, ${skipped} skipped, ${errors.length} error(s) — see logs`
+            : `${imported} imported, ${skipped} already there`
+        );
+        if (errors.length > 0) console.warn('Sheet import errors:', errors);
+        await loadInventory();
+        await loadProducts();
+      } else {
+        showToast(response.message || 'Done');
+      }
+      await loadSheetsStatus();
+    } else {
+      showToast(response.error || 'Sheets action failed');
+    }
+    setLoading(false);
+  };
+
   const copyCredential = async (value: string) => {
     try {
       await navigator.clipboard.writeText(value);
@@ -1721,6 +1772,102 @@ export default function AdminPage() {
 
     return (
       <div>
+        {/* Google Sheets */}
+        <div style={{ ...cardStyle, marginBottom: 20 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              marginBottom: 8,
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ fontSize: 15, fontWeight: 600, color: COLORS.text }}>Google Sheets</div>
+            {sheetsStatus && (
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 500,
+                  padding: '3px 10px',
+                  borderRadius: 999,
+                  color: sheetsStatus.ok ? COLORS.green : COLORS.red,
+                  background: `${sheetsStatus.ok ? COLORS.green : COLORS.red}15`,
+                }}
+              >
+                {sheetsStatus.ok ? `connected — ${sheetsStatus.title}` : 'not connected'}
+              </span>
+            )}
+          </div>
+
+          <div
+            style={{
+              fontSize: 12.5,
+              color: COLORS.textSecondary,
+              lineHeight: 1.6,
+              marginBottom: 16,
+            }}
+          >
+            Accounts listed in the <strong style={{ color: COLORS.text }}>Import</strong> tab are
+            pulled into inventory; delivered sales are written to{' '}
+            <strong style={{ color: COLORS.text }}>Sales</strong> and stock levels to{' '}
+            <strong style={{ color: COLORS.text }}>Stock</strong>. Import stamps each row it takes,
+            so running it twice never duplicates an account.
+          </div>
+
+          {sheetsStatus && !sheetsStatus.ok && (
+            <div
+              style={{
+                fontSize: 12,
+                color: COLORS.red,
+                background: 'rgba(234,67,53,0.06)',
+                border: '1px solid rgba(234,67,53,0.18)',
+                borderRadius: 8,
+                padding: '10px 12px',
+                marginBottom: 14,
+                fontFamily: 'var(--font-mono)',
+              }}
+            >
+              {sheetsStatus.error}
+            </div>
+          )}
+
+          {sheetsStatus?.ok && sheetsStatus.tabs && (
+            <div style={{ fontSize: 11.5, color: COLORS.textMuted, marginBottom: 14 }}>
+              Tabs: {sheetsStatus.tabs.join(' · ')}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {[
+              { action: 'init', label: 'Create tabs', primary: false },
+              { action: 'import', label: '⬇ Import accounts', primary: true },
+              { action: 'export', label: '⬆ Push stock levels', primary: false },
+            ].map((b) => (
+              <button
+                key={b.action}
+                onClick={() => runSheetsAction(b.action)}
+                disabled={loading || !sheetsStatus?.ok}
+                style={{
+                  padding: '8px 14px',
+                  background: b.primary ? COLORS.primary : 'transparent',
+                  border: `1px solid ${b.primary ? COLORS.primary : COLORS.border}`,
+                  borderRadius: 8,
+                  color: b.primary ? '#fff' : COLORS.text,
+                  fontSize: 12,
+                  fontWeight: b.primary ? 600 : 400,
+                  cursor: loading || !sheetsStatus?.ok ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font-inter)',
+                  opacity: loading || !sheetsStatus?.ok ? 0.5 : 1,
+                }}
+              >
+                {b.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
           {/* Stock & Delivery */}
           <div style={cardStyle}>

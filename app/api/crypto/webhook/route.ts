@@ -9,6 +9,7 @@ import {
   notifyTelegramOpsSale,
 } from '@/lib/telegram';
 import { checkAndAlertStock } from '@/lib/stock-alerts';
+import { exportSaleToSheet, exportStockLevels } from '@/lib/sheets-sync';
 import { Order } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
@@ -193,6 +194,20 @@ export async function POST(request: NextRequest) {
           'SELECT name FROM products WHERE id = $1',
           [order.product_id]
         );
+
+        // Mirror the sale into the spreadsheet. Both calls swallow their own
+        // errors, so an unreachable sheet cannot fail the webhook.
+        await exportSaleToSheet({
+          orderId: order_id,
+          productName: opsProduct?.name || `Product ${order.product_id}`,
+          quantity: order.quantity,
+          amountCents: order.amount,
+          coin: order.coin,
+          customerEmail: order.customer_email,
+          promoCode: order.promo_code,
+          status: deliveryResult.success ? 'delivered' : 'paid — delivery failed',
+        });
+        await exportStockLevels();
 
         await notifyTelegramOpsSale({
           orderId: order_id,

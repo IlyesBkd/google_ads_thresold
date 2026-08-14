@@ -6,6 +6,7 @@ export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
   error?: string;
+  message?: string;
 }
 
 class ApiClient {
@@ -165,6 +166,19 @@ class ApiClient {
     return this.request('/orders/reissue', {
       method: 'POST',
       body: JSON.stringify({ orderId }),
+    });
+  }
+
+  // ─── Google Sheets ────────────────────────────────────────────────────────
+
+  async getSheetsStatus() {
+    return this.request('/sheets');
+  }
+
+  async runSheetsAction(action: string) {
+    return this.request('/sheets', {
+      method: 'POST',
+      body: JSON.stringify({ action }),
     });
   }
 
