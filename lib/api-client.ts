@@ -128,6 +128,13 @@ class ApiClient {
     });
   }
 
+  async moveCredentials(ids: string[], productId: string) {
+    return this.request('/inventory', {
+      method: 'PATCH',
+      body: JSON.stringify({ ids, productId }),
+    });
+  }
+
   // ─── Orders ───────────────────────────────────────────────────────────────
 
   async getOrders(params?: {

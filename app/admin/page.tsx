@@ -855,6 +855,42 @@ export default function AdminPage() {
   // customer reuses their download link.
   const isDeletable = (status: string) => status === 'available' || status === 'error';
 
+  const handleMoveCredentials = async (ids: string[], productId: string) => {
+    if (ids.length === 0 || !productId) return;
+
+    const targetName = getProductName(productId);
+    const label = ids.length === 1 ? 'this account' : `${ids.length} accounts`;
+
+    // Worth a pause: this changes what the account is sold as, not the account.
+    if (
+      !confirm(
+        `Move ${label} to ${targetName}?\n\n` +
+          `This only re-labels the inventory. Do it once the account's real ` +
+          `threshold matches ${targetName} — otherwise you would sell it as ` +
+          `something it isn't.`
+      )
+    )
+      return;
+
+    setLoading(true);
+    const response = await api.moveCredentials(ids, productId);
+
+    if (response.success && response.data) {
+      const { moved, skipped } = response.data as { moved: number; skipped: number };
+      showToast(
+        skipped > 0
+          ? `${moved} moved, ${skipped} skipped (sold/reserved or already there)`
+          : `${moved} account${moved > 1 ? 's' : ''} moved to ${targetName}`
+      );
+      setSelectedCredentials([]);
+      await loadInventory();
+      await loadProducts();
+    } else {
+      showToast(response.error || 'Failed to move accounts');
+    }
+    setLoading(false);
+  };
+
   const handleDeleteCredentials = async (ids: string[]) => {
     if (ids.length === 0) return;
     const label = ids.length === 1 ? 'this account' : `${ids.length} accounts`;
@@ -1190,6 +1226,35 @@ export default function AdminPage() {
             <span style={{ fontSize: 12, color: COLORS.textSecondary }}>
               {selectedCredentials.length} selected
             </span>
+            {/* Re-classify: a threshold rises over time, so a Starter can
+                legitimately become a Pro once its real limit has moved. */}
+            <select
+              value=""
+              disabled={loading}
+              onChange={(e) => {
+                if (e.target.value) handleMoveCredentials(selectedCredentials, e.target.value);
+                e.target.value = '';
+              }}
+              style={{
+                padding: '6px 10px',
+                background: COLORS.card,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: 8,
+                color: COLORS.text,
+                fontSize: 12,
+                cursor: loading ? 'not-allowed' : 'pointer',
+                fontFamily: 'var(--font-inter)',
+                opacity: loading ? 0.6 : 1,
+              }}
+            >
+              <option value="">Move to…</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name.replace(' Account', '')}
+                </option>
+              ))}
+            </select>
+
             <button
               onClick={() => handleDeleteCredentials(selectedCredentials)}
               disabled={loading}

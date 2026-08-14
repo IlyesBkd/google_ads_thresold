@@ -240,6 +240,102 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * PATCH — move stock items to another product.
+ *
+ * A threshold rises as an account builds payment history, so an account
+ * imported as Starter can genuinely become a Pro one. This only re-labels the
+ * inventory row; it does not touch the Google Ads account itself.
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const admin = await requireAuth(request);
+
+    if (admin.role !== 'owner' && admin.role !== 'manager') {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: Only owner or manager can move stock items' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const ids: string[] = Array.isArray(body.ids) ? body.ids : body.id ? [body.id] : [];
+    const productId: string = body.productId;
+
+    if (ids.length === 0 || !productId) {
+      return NextResponse.json(
+        { success: false, error: 'Stock item ID(s) and a target productId are required' },
+        { status: 400 }
+      );
+    }
+
+    const target = await query<{ id: string; name: string }>(
+      'SELECT id, name FROM products WHERE id = $1',
+      [productId]
+    );
+
+    if (target.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Target product not found' },
+        { status: 404 }
+      );
+    }
+
+    // Only available items may move. A sold one belongs to a delivered order
+    // and a reserved one to a checkout in progress — re-labelling either would
+    // rewrite what a customer already bought.
+    const moved = await query<{ id: string; product_id: string }>(
+      `UPDATE stock_items
+       SET product_id = $1, updated_at = NOW()
+       WHERE id = ANY($2::text[])
+         AND status = 'available'
+         AND product_id <> $1
+       RETURNING id, product_id`,
+      [productId, ids]
+    );
+
+    const skipped = ids.length - moved.length;
+
+    if (moved.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Nothing moved — only available accounts not already on that product can be moved',
+        },
+        { status: 409 }
+      );
+    }
+
+    await query('INSERT INTO logs (type, message, admin_id) VALUES ($1, $2, $3)', [
+      'import',
+      `${moved.length} stock item(s) moved to ${target[0].name} by ${admin.email}` +
+        (skipped > 0 ? ` — ${skipped} skipped (sold, reserved, or already there)` : ''),
+      admin.adminId,
+    ]);
+
+    // Both sides of the move change stock level: one gains, one loses.
+    const affected = new Set<string>([productId]);
+    for (const item of moved) affected.add(item.product_id);
+    for (const id of affected) {
+      checkAndAlertStock(id).catch((err) => console.error('Stock alert error:', err));
+    }
+
+    // A product that was out of stock is effectively a restock.
+    notifyWaitlist(productId).catch((err) => console.error('Waitlist notify error:', err));
+
+    return NextResponse.json({
+      success: true,
+      data: { moved: moved.length, skipped, product: target[0].name },
+    });
+  } catch (error) {
+    console.error('Move inventory error:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    const status = message.includes('Unauthorized') ? 401 : 500;
+
+    return NextResponse.json({ success: false, error: message }, { status });
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     // Verify authentication and check role
