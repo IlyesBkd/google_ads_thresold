@@ -62,7 +62,9 @@ export async function deliverOrder(
          WHERE id IN (
            SELECT id FROM stock_items
            WHERE product_id = $2 AND status = 'available'
-           ORDER BY created_at
+           -- Same ordering as the reservation path: soonest-expiring promo
+           -- first, upload order as the tie-break.
+           ORDER BY promo_expires_at ASC NULLS LAST, created_at ASC
            LIMIT $3
            FOR UPDATE SKIP LOCKED
          )

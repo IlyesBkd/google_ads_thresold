@@ -93,7 +93,11 @@ export async function reserveStock(
        WHERE id IN (
          SELECT id FROM stock_items
          WHERE product_id = $2 AND status = 'available'
-         ORDER BY created_at
+         -- Sell what expires soonest first. The €400 promo is part of what the
+         -- buyer pays for, so letting the shortest-dated account sit in stock
+         -- while a longer-dated one ships is a real loss. Falls back to upload
+         -- order, which is what this used to be, for accounts with no promo.
+         ORDER BY promo_expires_at ASC NULLS LAST, created_at ASC
          LIMIT $3
          FOR UPDATE SKIP LOCKED
        )

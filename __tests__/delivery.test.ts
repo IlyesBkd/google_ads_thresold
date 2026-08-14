@@ -92,6 +92,12 @@ describe('deliverOrder', () => {
     expect(result.deliveredCount).toBe(2);
     // The top-up must only ask for the shortfall, not the whole quantity.
     expect(query.mock.calls[1][1]).toEqual(['order-1', 'starter', 1]);
+
+    // …and must use the same ordering as the reservation path, or the two
+    // would disagree about which account a buyer gets.
+    expect(sqlOf(query.mock.calls[1])).toContain(
+      'ORDER BY promo_expires_at ASC NULLS LAST, created_at ASC'
+    );
   });
 
   it('rolls the whole claim back when stock runs out', async () => {

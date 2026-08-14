@@ -65,6 +65,21 @@ describe('reserveStock', () => {
     expect(sqlCalls().at(-1)).toContain("SET status = 'reserved'");
   });
 
+  it('takes the soonest-expiring promo first, upload order as tie-break', async () => {
+    query
+      .mockResolvedValueOnce([]) // sweep: released items
+      .mockResolvedValueOnce([]) // sweep: expired orders
+      .mockResolvedValueOnce(rows(1)); // the claim
+
+    await reserveStock('order-1', 'prod-1', 1);
+
+    // The €400 promo is part of the sale, so a shorter-dated account must not
+    // sit in stock while a longer-dated one ships.
+    const claim = sqlCalls()[2];
+    expect(claim).toContain("SET status = 'reserved'");
+    expect(claim).toContain('ORDER BY promo_expires_at ASC NULLS LAST, created_at ASC');
+  });
+
   it('rolls back entirely when stock is short', async () => {
     query
       .mockResolvedValueOnce([])
