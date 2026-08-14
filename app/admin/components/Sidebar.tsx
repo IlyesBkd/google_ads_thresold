@@ -30,6 +30,18 @@ const NAV_ITEMS: { page: Page; label: string; icon: React.ReactNode }[] = [
     ),
   },
   {
+    page: 'analytics',
+    label: 'Analytics',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M2 16V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M6.5 16V4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M11 16v-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M15.5 16V2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
     page: 'products',
     label: 'Products',
     icon: (

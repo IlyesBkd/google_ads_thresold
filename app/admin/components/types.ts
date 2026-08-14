@@ -2,6 +2,7 @@ import { CSSProperties } from 'react';
 
 export type Page =
   | 'dashboard'
+  | 'analytics'
   | 'products'
   | 'inventory'
   | 'orders'

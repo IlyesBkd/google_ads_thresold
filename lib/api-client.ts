@@ -169,6 +169,12 @@ class ApiClient {
     });
   }
 
+  // ─── Analytics ────────────────────────────────────────────────────────────
+
+  async getAnalytics(days = 30) {
+    return this.request(`/analytics?days=${days}`);
+  }
+
   // ─── Google Sheets ────────────────────────────────────────────────────────
 
   async getSheetsStatus() {

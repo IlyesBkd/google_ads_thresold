@@ -4,6 +4,7 @@ import { COLORS, Page } from './types';
 
 const PAGE_TITLES: Record<Page, { eyebrow: string; title: string }> = {
   dashboard: { eyebrow: 'Overview', title: 'Dashboard' },
+  analytics: { eyebrow: 'Performance', title: 'Analytics' },
   products: { eyebrow: 'Catalog', title: 'Products' },
   inventory: { eyebrow: 'Stock', title: 'Inventory' },
   orders: { eyebrow: 'Commerce', title: 'Orders' },

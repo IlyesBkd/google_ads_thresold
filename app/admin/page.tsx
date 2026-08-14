@@ -7,6 +7,7 @@ import {
   TopBar,
   Toast,
   DashboardPage,
+  AnalyticsPage,
   LogsPage,
   WaitlistPage,
   COLORS,
@@ -21,6 +22,7 @@ import {
   type LogEntry,
   type DashboardStats,
   type WaitlistEntry,
+  type AnalyticsData,
 } from './components';
 
 function BarsMark({ size = 24 }: { size?: number }) {
@@ -56,6 +58,10 @@ export default function AdminPage() {
   // Inventory passwords stay hidden until asked for; never persisted, so a
   // reload puts them back behind the mask.
   const [showCredentials, setShowCredentials] = useState(false);
+
+  // Analytics
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [analyticsDays, setAnalyticsDays] = useState(30);
 
   // Google Sheets link
   const [sheetsStatus, setSheetsStatus] = useState<{
@@ -383,6 +389,22 @@ export default function AdminPage() {
       if (r.success) setSheetsStatus(r.data as typeof sheetsStatus);
     });
   }, [loggedIn, currentPage]);
+
+  // Analytics is several aggregate queries — fetch only when looked at, and
+  // again whenever the period changes.
+  useEffect(() => {
+    if (!loggedIn || currentPage !== 'analytics') return;
+    let cancelled = false;
+    setLoading(true);
+    api.getAnalytics(analyticsDays).then((r) => {
+      if (cancelled) return;
+      if (r.success) setAnalytics(r.data as AnalyticsData);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [loggedIn, currentPage, analyticsDays]);
 
   // Escape key handler
   useEffect(() => {
@@ -2509,6 +2531,15 @@ export default function AdminPage() {
               setOrderDrawerOpen(true);
             }}
             getProductName={getProductName}
+          />
+        );
+      case 'analytics':
+        return (
+          <AnalyticsPage
+            data={analytics}
+            days={analyticsDays}
+            onChangeDays={setAnalyticsDays}
+            loading={loading}
           />
         );
       case 'products':
