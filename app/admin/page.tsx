@@ -53,6 +53,10 @@ export default function AdminPage() {
   // Loading state
   const [loading, setLoading] = useState(false);
 
+  // Inventory passwords stay hidden until asked for; never persisted, so a
+  // reload puts them back behind the mask.
+  const [showCredentials, setShowCredentials] = useState(false);
+
   // Data state
   const [products, setProducts] = useState<Product[]>([]);
   const [credentials, setCredentials] = useState<Credential[]>([]);
@@ -1142,6 +1146,44 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* Reveal toggle. Off by default so the table is safe to have open
+            while screen-sharing or with someone looking over your shoulder. */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            marginBottom: 12,
+            flexWrap: 'wrap',
+          }}
+        >
+          <button
+            onClick={() => setShowCredentials((v) => !v)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '6px 12px',
+              background: showCredentials ? 'rgba(251,188,4,0.1)' : 'transparent',
+              border: `1px solid ${showCredentials ? 'rgba(251,188,4,0.32)' : COLORS.border}`,
+              borderRadius: 8,
+              color: showCredentials ? COLORS.yellow : COLORS.textSecondary,
+              fontSize: 12,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-inter)',
+            }}
+          >
+            {showCredentials ? '🙈 Hide credentials' : '👁 Show credentials'}
+          </button>
+
+          {showCredentials && (
+            <span style={{ fontSize: 11.5, color: COLORS.textMuted }}>
+              Passwords are visible — click any row to copy it
+            </span>
+          )}
+        </div>
+
         {/* Bulk actions */}
         {selectedCredentials.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
@@ -1239,14 +1281,23 @@ export default function AdminPage() {
                     />
                   </td>
                   <td
+                    onClick={() =>
+                      showCredentials && copyCredential(`${cred.email}:${cred.password}`)
+                    }
+                    title={showCredentials ? 'Click to copy' : undefined}
                     style={{
                       padding: '12px 16px',
                       fontSize: 12,
                       color: COLORS.text,
                       fontFamily: 'var(--font-mono)',
+                      cursor: showCredentials ? 'copy' : 'default',
+                      userSelect: showCredentials ? 'all' : 'none',
+                      whiteSpace: 'nowrap',
                     }}
                   >
-                    {maskEmail(cred.email)}:{'••••••'}
+                    {showCredentials
+                      ? `${cred.email}:${cred.password}`
+                      : `${maskEmail(cred.email)}:${'••••••'}`}
                   </td>
                   <td style={{ padding: '12px 16px', fontSize: 12, color: COLORS.textSecondary }}>
                     {getProductName(cred.productId).replace(' Account', '')}
@@ -1369,6 +1420,15 @@ export default function AdminPage() {
       showToast(response.error || 'Failed to update order');
     }
     setLoading(false);
+  };
+
+  const copyCredential = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      showToast('Credential copied');
+    } catch {
+      showToast('Could not copy — select the text manually');
+    }
   };
 
   const reissueLink = async (orderId: string) => {
