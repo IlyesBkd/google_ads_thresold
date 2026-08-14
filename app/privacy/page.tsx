@@ -14,9 +14,8 @@ export default function PrivacyPage() {
         no tracking of you across other websites.
       </p>
       <p>
-        The data controller is GADSCALE, established in France. Postal address:{' '}
-        <span className="todo">TODO: postal address</span>. For any question about your data, write
-        to <a href="mailto:gadscale@gmail.com">gadscale@gmail.com</a>.
+        The data controller is GADSCALE, established in France. For any question about your data,
+        write to <a href="mailto:gadscale@gmail.com">gadscale@gmail.com</a>.
       </p>
 
       <h2>What we collect</h2>

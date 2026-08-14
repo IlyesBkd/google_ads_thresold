@@ -13,7 +13,11 @@ body {
   margin: 0;
   background: #080808;
   color: #f5f5f5;
-  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family:
+    var(--font-inter),
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 ::selection {
@@ -96,7 +100,9 @@ body {
 }
 
 .btn-orders {
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 .btn-orders:hover {
   border-color: rgba(255, 255, 255, 0.3);
@@ -170,15 +176,4 @@ body {
 }
 .legal-body a {
   color: #4285f4;
-}
-/* Placeholder awaiting the operator's real company details. */
-.legal-body .todo {
-  display: inline-block;
-  padding: 1px 7px;
-  border-radius: 4px;
-  background: rgba(251, 188, 4, 0.12);
-  border: 1px solid rgba(251, 188, 4, 0.35);
-  color: #fbbc04;
-  font-family: var(--font-mono), monospace;
-  font-size: 12.5px;
 }

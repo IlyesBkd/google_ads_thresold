@@ -14,8 +14,7 @@ export default function TermsPage() {
         &quot;us&quot;). By placing an order you accept them in full.
       </p>
       <p>
-        GADSCALE is established in France. Postal address:{' '}
-        <span className="todo">TODO: postal address</span>. You can reach us at{' '}
+        GADSCALE is established in France. You can reach us at{' '}
         <a href="mailto:gadscale@gmail.com">gadscale@gmail.com</a> or on Telegram.
       </p>
 
