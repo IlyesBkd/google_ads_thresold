@@ -246,13 +246,14 @@ export async function notifyTelegramRestock(productId: string, addedCount: numbe
     [productId]
   );
   if (products.length === 0) return;
-  const priceLabel = `€${(products[0].price / 100).toFixed(0)}`;
+  const priceLabel = `$${(products[0].price / 100).toFixed(0)}`;
+  const nameLabel = `${products[0].name}${addedCount > 1 ? 's' : ''}`;
 
   const text = [
-    `🔥 <b>RESTOCK — ${addedCount} ${products[0].name}</b>`,
+    `🔥 <b>RESTOCK — ${addedCount} ${nameLabel}</b>`,
     ``,
     `💰 <b>${priceLabel}</b> · BTC / ETH / USDT`,
-    `⚡ Livraison automatique immédiate`,
+    `⚡ Instant automatic delivery`,
     ``,
     `👉 gadscale.com`,
   ].join('\n');
@@ -278,11 +279,11 @@ export async function notifyTelegramSalePublic(details: {
   }
 
   const text = [
-    `📦 <b>Nouvelle vente</b> ✓`,
+    `📦 <b>New sale</b> ✓`,
     ``,
     `🛍️ <b>${details.productName}</b> ×${details.quantity}`,
-    `💳 Paiement ${details.coin.toUpperCase()} confirmé`,
-    `⚡ Livraison automatique`,
+    `💳 ${details.coin.toUpperCase()} payment confirmed`,
+    `⚡ Instant automatic delivery`,
     ``,
     `👉 gadscale.com`,
   ].join('\n');
