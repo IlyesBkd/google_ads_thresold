@@ -6,10 +6,12 @@
  * PostHog's capture endpoint, so there is no extra client bundle and the CSP
  * only has to allow one host.
  *
- * No-ops when NEXT_PUBLIC_POSTHOG_KEY is unset, so local dev stays silent.
+ * No-ops when no project token is set, so local dev stays silent.
  */
 
-const KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+// PostHog's own setup snippet calls this the project token; the shorter name
+// is kept as a fallback so either spelling works.
+const KEY = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN || process.env.NEXT_PUBLIC_POSTHOG_KEY;
 const HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com';
 
 export type FunnelEvent =
