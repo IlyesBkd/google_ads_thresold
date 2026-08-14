@@ -14,10 +14,9 @@ export default function PrivacyPage() {
         no tracking of you across other websites.
       </p>
       <p>
-        The data controller is <span className="todo">TODO: legal entity name</span>, registered in{' '}
-        <span className="todo">TODO: country</span> at{' '}
-        <span className="todo">TODO: registered address</span>. For any question about your data,
-        write to <span className="todo">TODO: contact email</span>.
+        The data controller is GADSCALE, established in France. Postal address:{' '}
+        <span className="todo">TODO: postal address</span>. For any question about your data, write
+        to <a href="mailto:gadscale@gmail.com">gadscale@gmail.com</a>.
       </p>
 
       <h2>What we collect</h2>
@@ -72,19 +71,22 @@ export default function PrivacyPage() {
 
       <h2>How long we keep it</h2>
       <p>
-        Order records are kept for{' '}
-        <span className="todo">TODO: retention period, e.g. 5 years</span> to satisfy accounting
-        obligations. Download links and their tokens expire after 24 hours. Access codes expire
-        after 10 minutes and are deleted within a day. Waiting-list entries are deleted once you
-        have been notified, or on request.
+        Order records are kept for 5 years, the retention period required by French accounting law.
+        Download links and their tokens expire after 24 hours. Access codes expire after 10 minutes
+        and are deleted within a day. Waiting-list entries are deleted once you have been notified,
+        or on request.
       </p>
 
       <h2>Your rights</h2>
       <p>
         You can ask us for a copy of your data, to correct it, to delete it, or to restrict how we
-        use it. Write to <span className="todo">TODO: contact email</span> from the address you used
-        to order, and we will respond within 30 days. If you are in the EU or UK, you also have the
-        right to complain to your national data protection authority.
+        use it. Write to <a href="mailto:gadscale@gmail.com">gadscale@gmail.com</a> from the address
+        you used to order, and we will respond within 30 days. You also have the right to complain
+        to a supervisory authority — in France, the{' '}
+        <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer">
+          CNIL
+        </a>
+        .
       </p>
       <p>
         Deleting your order record means we can no longer honour the guarantee or re-send your

@@ -92,11 +92,10 @@ export default function RefundsPage() {
 
       <h2>Legal information</h2>
       <p>
-        GADSCALE is operated by <span className="todo">TODO: legal entity name</span>, registered in{' '}
-        <span className="todo">TODO: country</span>. Statutory consumer rights that apply in your
-        jurisdiction are not affected by this policy. Note that in many jurisdictions the right of
-        withdrawal does not apply to digital content delivered immediately with the buyer&apos;s
-        consent.
+        GADSCALE is established in France. Statutory consumer rights that apply where you live are
+        not affected by this policy. Note that the right of withdrawal does not apply to digital
+        content supplied immediately with the buyer&apos;s express consent — which is what happens
+        when you receive your credentials.
       </p>
     </LegalPage>
   );

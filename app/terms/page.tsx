@@ -14,9 +14,9 @@ export default function TermsPage() {
         &quot;us&quot;). By placing an order you accept them in full.
       </p>
       <p>
-        GADSCALE is operated by <span className="todo">TODO: legal entity name</span>, registered in{' '}
-        <span className="todo">TODO: country</span> at{' '}
-        <span className="todo">TODO: registered address</span>.
+        GADSCALE is established in France. Postal address:{' '}
+        <span className="todo">TODO: postal address</span>. You can reach us at{' '}
+        <a href="mailto:gadscale@gmail.com">gadscale@gmail.com</a> or on Telegram.
       </p>
 
       <h2>1. What you are buying</h2>
@@ -99,7 +99,8 @@ export default function TermsPage() {
 
       <h2>9. Governing law and contact</h2>
       <p>
-        These terms are governed by the laws of <span className="todo">TODO: jurisdiction</span>.
+        These terms are governed by French law. Where you are a consumer, this does not deprive you
+        of the protection of the mandatory rules of the country in which you live.
       </p>
       <p>
         For anything at all, reach us on Telegram at{' '}
