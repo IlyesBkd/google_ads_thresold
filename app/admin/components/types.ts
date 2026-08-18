@@ -37,6 +37,14 @@ export interface Credential {
   orderId: string | null;
   googleAdsCreatedAt: string | null;
   promoExpiresAt: string | null;
+  totpSecret?: string | null;
+  recoveryEmail?: string | null;
+  proxy?: string | null;
+  cookies?: string | null;
+  backupCodes?: string | null;
+  seedPhrase?: string | null;
+  phoneNumber?: string | null;
+  userAgent?: string | null;
 }
 
 export interface Order {

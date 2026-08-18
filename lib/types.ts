@@ -28,6 +28,11 @@ export interface StockItem {
   totp_secret: string | null;
   recovery_email: string | null;
   proxy: string | null;
+  cookies: string | null;
+  backup_codes: string | null;
+  seed_phrase: string | null;
+  phone_number: string | null;
+  user_agent: string | null;
   status: StockStatus;
   order_id: string | null;
   created_at: Date;

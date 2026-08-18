@@ -178,6 +178,14 @@ export default function AdminPage() {
         orderId: c.order_id || c.orderId || null,
         googleAdsCreatedAt: c.google_ads_created_at || c.googleAdsCreatedAt || null,
         promoExpiresAt: c.promo_expires_at || c.promoExpiresAt || null,
+        totpSecret: c.totp_secret || c.totpSecret || null,
+        recoveryEmail: c.recovery_email || c.recoveryEmail || null,
+        proxy: c.proxy || null,
+        cookies: c.cookies || null,
+        backupCodes: c.backup_codes || c.backupCodes || null,
+        seedPhrase: c.seed_phrase || c.seedPhrase || null,
+        phoneNumber: c.phone_number || c.phoneNumber || null,
+        userAgent: c.user_agent || c.userAgent || null,
       }));
       setCredentials(mappedCredentials);
     } else {
@@ -1122,14 +1130,14 @@ export default function AdminPage() {
                   display: 'block',
                 }}
               >
-                Paste credentials — one per line: email|password|2FA secret|recovery email|proxy
-                (last three optional)
+                Paste credentials — one per line: email|password|2FA secret|recovery email|proxy|cookies|backup codes|seed|phone|user-agent
+                (everything after the proxy is optional)
               </label>
               <textarea
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
                 placeholder={
-                  'email@gmail.com|password|TOTP_SECRET|recovery@mail.com|ip:port:user:pass\nemail2@gmail.com|password2'
+                  'email@gmail.com|password|TOTP_SECRET|recovery@mail.com|ip:port:user:pass|[{"name":"SID","value":"..."}]|code1, code2, code3|word1 word2 ...|+33****0000 https://act.link|Mozilla/5.0 ...'
                 }
                 style={{
                   width: '100%',
@@ -1386,7 +1394,7 @@ export default function AdminPage() {
                   </td>
                   <td
                     onClick={() =>
-                      showCredentials && copyCredential(`${cred.email}:${cred.password}`)
+                      showCredentials && copyCredential(fullCredentialText(cred))
                     }
                     title={showCredentials ? 'Click to copy' : undefined}
                     style={{
@@ -1567,6 +1575,34 @@ export default function AdminPage() {
     } catch {
       showToast('Could not copy — select the text manually');
     }
+  };
+
+  const fullCredentialText = (cred: Credential): string => {
+    const lines = [`Email: ${cred.email}`, `Password: ${cred.password}`];
+    if (cred.totpSecret) lines.push(`2FA Secret: ${cred.totpSecret}`);
+    if (cred.backupCodes)
+      lines.push(
+        `Backup Codes:\n${cred.backupCodes
+          .split(',')
+          .map((c) => c.trim())
+          .filter(Boolean)
+          .join('\n')}`
+      );
+    if (cred.seedPhrase) lines.push(`Recovery Seed: ${cred.seedPhrase}`);
+    if (cred.recoveryEmail) lines.push(`Recovery Email: ${cred.recoveryEmail}`);
+    if (cred.phoneNumber) lines.push(`Phone / Activation: ${cred.phoneNumber}`);
+    if (cred.proxy) lines.push(`Proxy: ${cred.proxy}`);
+    if (cred.userAgent) lines.push(`User-Agent: ${cred.userAgent}`);
+    if (cred.cookies) {
+      let json = cred.cookies;
+      try {
+        json = JSON.stringify(JSON.parse(cred.cookies), null, 2);
+      } catch {
+        /* emit as-is */
+      }
+      lines.push(`Cookies:\n${json}`);
+    }
+    return lines.join('\n');
   };
 
   const reissueLink = async (orderId: string) => {

@@ -79,12 +79,12 @@ export async function POST(request: NextRequest) {
     // Parse credentials. Preferred format is pipe-delimited so optional fields
     // (the proxy in particular) can themselves contain colons:
     //   email|password|totp_secret|recovery_email|proxy
-    // The last three fields are optional. For backward compatibility a line
+    // Parse credentials. Preferred format is pipe-delimited so optional fields
+    // (the proxy in particular) can themselves contain colons:
+    //   email|password|totp_secret|recovery_email|proxy|cookies|backup_codes|seed_phrase|phone_number|user_agent
+    // Everything after the proxy is optional. For backward compatibility a line
     // without a pipe is still treated as the legacy "email:password" format.
-    const lines = credentials
-      .split('\n')
-      .map((line: string) => line.trim())
-      .filter(Boolean);
+    const lines = credentials.split('\n').map((line: string) => line.trim()).filter(Boolean);
 
     const toImport: Array<{
       email: string;
@@ -92,6 +92,11 @@ export async function POST(request: NextRequest) {
       totpSecret: string | null;
       recoveryEmail: string | null;
       proxy: string | null;
+      cookies: string | null;
+      backupCodes: string | null;
+      seedPhrase: string | null;
+      phoneNumber: string | null;
+      userAgent: string | null;
     }> = [];
     const errors: string[] = [];
     let lineNumber = 0;
@@ -104,14 +109,17 @@ export async function POST(request: NextRequest) {
       let totpSecret: string | null = null;
       let recoveryEmail: string | null = null;
       let proxy: string | null = null;
+      let cookies: string | null = null;
+      let backupCodes: string | null = null;
+      let seedPhrase: string | null = null;
+      let phoneNumber: string | null = null;
+      let userAgent: string | null = null;
 
       if (line.includes('|')) {
         const parts = line.split('|').map((p: string) => p.trim());
 
         if (parts.length < 2) {
-          errors.push(
-            `Line ${lineNumber}: Invalid format (expected email|password|totp|recovery|proxy)`
-          );
+          errors.push(`Line ${lineNumber}: Invalid format (expected email|password|totp|recovery|proxy|...)`);
           continue;
         }
 
@@ -120,6 +128,11 @@ export async function POST(request: NextRequest) {
         totpSecret = parts[2] || null;
         recoveryEmail = parts[3] || null;
         proxy = parts[4] || null;
+        cookies = parts[5] || null;
+        backupCodes = parts[6] || null;
+        seedPhrase = parts[7] || null;
+        phoneNumber = parts[8] || null;
+        userAgent = parts[9] || null;
       } else {
         // Legacy "email:password" (password may contain colons)
         const idx = line.indexOf(':');
@@ -146,7 +159,18 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      toImport.push({ email, password, totpSecret, recoveryEmail, proxy });
+      toImport.push({
+        email,
+        password,
+        totpSecret,
+        recoveryEmail,
+        proxy,
+        cookies,
+        backupCodes,
+        seedPhrase,
+        phoneNumber,
+        userAgent,
+      });
     }
 
     if (toImport.length === 0) {
@@ -182,8 +206,8 @@ export async function POST(request: NextRequest) {
 
       try {
         await execute(
-          `INSERT INTO stock_items (product_id, email, password, totp_secret, recovery_email, proxy, status, google_ads_created_at, promo_expires_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          `INSERT INTO stock_items (product_id, email, password, totp_secret, recovery_email, proxy, cookies, backup_codes, seed_phrase, phone_number, user_agent, status, google_ads_created_at, promo_expires_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
           [
             productId,
             item.email,
@@ -191,6 +215,11 @@ export async function POST(request: NextRequest) {
             item.totpSecret,
             item.recoveryEmail,
             item.proxy,
+            item.cookies,
+            item.backupCodes,
+            item.seedPhrase,
+            item.phoneNumber,
+            item.userAgent,
             'available',
             createdDate,
             expiresDate,

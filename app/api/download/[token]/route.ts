@@ -55,6 +55,11 @@ function generateCredentialsTxt(
     totp_secret?: string | null;
     recovery_email?: string | null;
     proxy?: string | null;
+    cookies?: string | null;
+    backup_codes?: string | null;
+    seed_phrase?: string | null;
+    phone_number?: string | null;
+    user_agent?: string | null;
   }>,
   orderId: string,
   productName: string
@@ -84,11 +89,36 @@ Password: ${cred.password}
     if (cred.totp_secret) {
       content += `2FA Secret: ${cred.totp_secret}\n`;
     }
+    if (cred.backup_codes) {
+      const codes = cred.backup_codes
+        .split(',')
+        .map((c) => c.trim())
+        .filter(Boolean);
+      content += `Backup Codes:\n${codes.map((c) => `  ${c}`).join('\n')}\n`;
+    }
+    if (cred.seed_phrase) {
+      content += `Recovery Seed: ${cred.seed_phrase}\n`;
+    }
     if (cred.recovery_email) {
       content += `Recovery Email: ${cred.recovery_email}\n`;
     }
+    if (cred.phone_number) {
+      content += `Phone / Activation: ${cred.phone_number}\n`;
+    }
     if (cred.proxy) {
       content += `Proxy: ${cred.proxy}\n`;
+    }
+    if (cred.user_agent) {
+      content += `User-Agent: ${cred.user_agent}\n`;
+    }
+    if (cred.cookies) {
+      let cookiesJson = cred.cookies;
+      try {
+        cookiesJson = JSON.stringify(JSON.parse(cred.cookies), null, 2);
+      } catch {
+        // Not valid JSON — emit as-is.
+      }
+      content += `\nCookies (Dolphin session — save as cookies.json and import):\n${cookiesJson}\n`;
     }
     content += `\n`;
   });

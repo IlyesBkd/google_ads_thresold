@@ -244,6 +244,11 @@ export async function getCredentialsForToken(token: string): Promise<{
     totp_secret: string | null;
     recovery_email: string | null;
     proxy: string | null;
+    cookies: string | null;
+    backup_codes: string | null;
+    seed_phrase: string | null;
+    phone_number: string | null;
+    user_agent: string | null;
   }>;
   orderId?: string;
   productName?: string;
@@ -281,7 +286,7 @@ export async function getCredentialsForToken(token: string): Promise<{
     }
 
     const credentials = await query<StockItem>(
-      `SELECT email, password, totp_secret, recovery_email, proxy FROM stock_items
+      `SELECT email, password, totp_secret, recovery_email, proxy, cookies, backup_codes, seed_phrase, phone_number, user_agent FROM stock_items
        WHERE order_id = $1 AND status = 'sold'`,
       [tokenData.order_id]
     );
@@ -302,6 +307,11 @@ export async function getCredentialsForToken(token: string): Promise<{
         totp_secret: c.totp_secret,
         recovery_email: c.recovery_email,
         proxy: c.proxy,
+        cookies: c.cookies,
+        backup_codes: c.backup_codes,
+        seed_phrase: c.seed_phrase,
+        phone_number: c.phone_number,
+        user_agent: c.user_agent,
       })),
       orderId: order.id,
       productName: order.product_name,
