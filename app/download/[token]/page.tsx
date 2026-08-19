@@ -166,27 +166,6 @@ export default function DownloadPage() {
           )}
 
           <button
-            onClick={handleDownload}
-            disabled={downloading}
-            style={{
-              width: '100%',
-              padding: '16px',
-              background: downloading ? '#2a5a9a' : '#4285F4',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '12px',
-              fontSize: '16px',
-              fontWeight: 600,
-              cursor: downloading ? 'not-allowed' : 'pointer',
-              marginBottom: '12px',
-              opacity: downloading ? 0.7 : 1,
-              transition: 'all 0.15s',
-            }}
-          >
-            {downloading ? 'Downloading...' : '⬇️ Download credentials.txt'}
-          </button>
-
-          <button
             onClick={() => {
               const a = document.createElement('a');
               a.href = `/api/download/${token}/zip`;
@@ -197,12 +176,12 @@ export default function DownloadPage() {
             }}
             style={{
               width: '100%',
-              padding: '14px',
-              background: 'transparent',
-              color: '#4285F4',
-              border: '1px solid rgba(66,133,244,0.3)',
+              padding: '16px',
+              background: '#4285F4',
+              color: '#fff',
+              border: 'none',
               borderRadius: '12px',
-              fontSize: '15px',
+              fontSize: '16px',
               fontWeight: 600,
               cursor: 'pointer',
               marginBottom: '20px',
