@@ -84,7 +84,12 @@ export async function POST(request: NextRequest) {
     const admin = await requireAuth(request);
 
     const body = await request.json();
-    const { productId, credentials, googleAdsCreatedAt } = body;
+    const { productId, credentials, googleAdsCreatedAt, files } = body;
+
+    // Optional per-account binary files (identity docs, user-agent screenshots).
+    // Keyed by account email so they line up with the pipe-delimited lines above.
+    const filesByEmail: Record<string, Array<{ name: string; mime: string; data: string }>> =
+      files && typeof files === 'object' ? files : {};
 
     if (!productId || !credentials) {
       return NextResponse.json(
@@ -226,9 +231,12 @@ export async function POST(request: NextRequest) {
       }
 
       try {
+        const accountFiles = filesByEmail[item.email];
+        const filesJson = accountFiles && accountFiles.length > 0 ? JSON.stringify(accountFiles) : null;
+
         await execute(
-          `INSERT INTO stock_items (product_id, email, password, totp_secret, recovery_email, recovery_password, proxy, cookies, backup_codes, seed_phrase, phone_number, user_agent, status, google_ads_created_at, promo_expires_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+          `INSERT INTO stock_items (product_id, email, password, totp_secret, recovery_email, recovery_password, proxy, cookies, backup_codes, seed_phrase, phone_number, user_agent, files, status, google_ads_created_at, promo_expires_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
           [
             productId,
             item.email,
@@ -242,6 +250,7 @@ export async function POST(request: NextRequest) {
             item.seedPhrase,
             item.phoneNumber,
             item.userAgent,
+            filesJson,
             'available',
             createdDate,
             expiresDate,

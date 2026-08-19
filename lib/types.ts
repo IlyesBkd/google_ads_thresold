@@ -34,6 +34,7 @@ export interface StockItem {
   seed_phrase: string | null;
   phone_number: string | null;
   user_agent: string | null;
+  files: string | null;
   status: StockStatus;
   order_id: string | null;
   created_at: Date;

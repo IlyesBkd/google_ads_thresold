@@ -178,12 +178,38 @@ export default function DownloadPage() {
               fontSize: '16px',
               fontWeight: 600,
               cursor: downloading ? 'not-allowed' : 'pointer',
-              marginBottom: '20px',
+              marginBottom: '12px',
               opacity: downloading ? 0.7 : 1,
               transition: 'all 0.15s',
             }}
           >
             {downloading ? 'Downloading...' : '⬇️ Download credentials.txt'}
+          </button>
+
+          <button
+            onClick={() => {
+              const a = document.createElement('a');
+              a.href = `/api/download/${token}/zip`;
+              a.download = `gadscale-account.zip`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+            }}
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: 'transparent',
+              color: '#4285F4',
+              border: '1px solid rgba(66,133,244,0.3)',
+              borderRadius: '12px',
+              fontSize: '15px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              marginBottom: '20px',
+              transition: 'all 0.15s',
+            }}
+          >
+            📁 Download full account folder (.zip)
           </button>
 
           {/* Warning */}
