@@ -373,6 +373,9 @@ export async function PATCH(request: NextRequest) {
 
     // A product that was out of stock is effectively a restock.
     notifyWaitlist(productId).catch((err) => console.error('Waitlist notify error:', err));
+    notifyTelegramRestock(productId, moved.length).catch((err) =>
+      console.error('Telegram restock post error:', err)
+    );
 
     return NextResponse.json({
       success: true,
