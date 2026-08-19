@@ -52,35 +52,50 @@ export async function sendTelegramChannelMessage(
 
 /**
  * Send a message to any Telegram chat via a bot.
+ *
+ * Retries transient network failures (e.g. ETIMEDOUT to api.telegram.org from
+ * a serverless datacenter). Telegram API errors (4xx) are NOT retried — a bad
+ * token or chat id won't fix itself.
  */
 export async function sendTelegramMessage(
   token: string,
   chatId: string,
-  text: string
+  text: string,
+  attempts = 3
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        parse_mode: 'HTML',
-        disable_web_page_preview: false,
-      }),
-    });
+  let lastError: string | undefined;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Telegram API error:', response.status, errorText);
-      return { success: false, error: `Telegram API error: ${response.status}` };
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text,
+          parse_mode: 'HTML',
+          disable_web_page_preview: false,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Telegram API error:', response.status, errorText);
+        return { success: false, error: `Telegram API error: ${response.status}` };
+      }
+
+      return { success: true };
+    } catch (error) {
+      lastError = getErrorMessage(error);
+      console.error(`Telegram send error (attempt ${i + 1}/${attempts}):`, error);
+      // Back off before the next attempt; skip the sleep on the last one.
+      if (i < attempts - 1) {
+        await new Promise((r) => setTimeout(r, 800 * (i + 1)));
+      }
     }
-
-    return { success: true };
-  } catch (error) {
-    console.error('Telegram send error:', error);
-    return { success: false, error: getErrorMessage(error) };
   }
+
+  return { success: false, error: lastError };
 }
 
 /**
