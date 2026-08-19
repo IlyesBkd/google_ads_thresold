@@ -27,6 +27,7 @@ export interface StockItem {
   password: string;
   totp_secret: string | null;
   recovery_email: string | null;
+  recovery_password: string | null;
   proxy: string | null;
   cookies: string | null;
   backup_codes: string | null;

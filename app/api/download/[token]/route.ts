@@ -54,6 +54,7 @@ function generateCredentialsTxt(
     password: string;
     totp_secret?: string | null;
     recovery_email?: string | null;
+    recovery_password?: string | null;
     proxy?: string | null;
     cookies?: string | null;
     backup_codes?: string | null;
@@ -101,6 +102,9 @@ Password: ${cred.password}
     }
     if (cred.recovery_email) {
       content += `Recovery Email: ${cred.recovery_email}\n`;
+    }
+    if (cred.recovery_password) {
+      content += `Recovery Email Password: ${cred.recovery_password}\n`;
     }
     if (cred.phone_number) {
       content += `Phone / Activation: ${cred.phone_number}\n`;

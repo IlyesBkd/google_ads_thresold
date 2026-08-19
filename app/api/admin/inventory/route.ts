@@ -6,6 +6,23 @@ import { checkAndAlertStock } from '@/lib/stock-alerts';
 import { notifyWaitlist } from '@/lib/waitlist-notify';
 import { notifyTelegramRestock } from '@/lib/telegram';
 
+/**
+ * Cookies are arbitrary JSON that can contain the pipe delimiter, so the import
+ * format base64-encodes them with a `base64:` prefix. This decodes that prefix
+ * when present and leaves anything else untouched.
+ */
+function decodeOptionalField(value: string | undefined): string | null {
+  if (!value) return null;
+  if (value.startsWith('base64:')) {
+    try {
+      return Buffer.from(value.slice('base64:'.length), 'base64').toString('utf-8');
+    } catch {
+      return value;
+    }
+  }
+  return value;
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Verify authentication
@@ -81,7 +98,7 @@ export async function POST(request: NextRequest) {
     //   email|password|totp_secret|recovery_email|proxy
     // Parse credentials. Preferred format is pipe-delimited so optional fields
     // (the proxy in particular) can themselves contain colons:
-    //   email|password|totp_secret|recovery_email|proxy|cookies|backup_codes|seed_phrase|phone_number|user_agent
+    //   email|password|totp_secret|recovery_email|recovery_password|proxy|cookies|backup_codes|seed_phrase|phone_number|user_agent
     // Everything after the proxy is optional. For backward compatibility a line
     // without a pipe is still treated as the legacy "email:password" format.
     const lines = credentials.split('\n').map((line: string) => line.trim()).filter(Boolean);
@@ -91,6 +108,7 @@ export async function POST(request: NextRequest) {
       password: string;
       totpSecret: string | null;
       recoveryEmail: string | null;
+      recoveryPassword: string | null;
       proxy: string | null;
       cookies: string | null;
       backupCodes: string | null;
@@ -108,6 +126,7 @@ export async function POST(request: NextRequest) {
       let password: string;
       let totpSecret: string | null = null;
       let recoveryEmail: string | null = null;
+      let recoveryPassword: string | null = null;
       let proxy: string | null = null;
       let cookies: string | null = null;
       let backupCodes: string | null = null;
@@ -127,12 +146,13 @@ export async function POST(request: NextRequest) {
         password = parts[1];
         totpSecret = parts[2] || null;
         recoveryEmail = parts[3] || null;
-        proxy = parts[4] || null;
-        cookies = parts[5] || null;
-        backupCodes = parts[6] || null;
-        seedPhrase = parts[7] || null;
-        phoneNumber = parts[8] || null;
-        userAgent = parts[9] || null;
+        recoveryPassword = parts[4] || null;
+        proxy = parts[5] || null;
+        cookies = decodeOptionalField(parts[6]);
+        backupCodes = parts[7] || null;
+        seedPhrase = parts[8] || null;
+        phoneNumber = parts[9] || null;
+        userAgent = parts[10] || null;
       } else {
         // Legacy "email:password" (password may contain colons)
         const idx = line.indexOf(':');
@@ -164,6 +184,7 @@ export async function POST(request: NextRequest) {
         password,
         totpSecret,
         recoveryEmail,
+        recoveryPassword,
         proxy,
         cookies,
         backupCodes,
@@ -206,14 +227,15 @@ export async function POST(request: NextRequest) {
 
       try {
         await execute(
-          `INSERT INTO stock_items (product_id, email, password, totp_secret, recovery_email, proxy, cookies, backup_codes, seed_phrase, phone_number, user_agent, status, google_ads_created_at, promo_expires_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+          `INSERT INTO stock_items (product_id, email, password, totp_secret, recovery_email, recovery_password, proxy, cookies, backup_codes, seed_phrase, phone_number, user_agent, status, google_ads_created_at, promo_expires_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
           [
             productId,
             item.email,
             item.password,
             item.totpSecret,
             item.recoveryEmail,
+            item.recoveryPassword,
             item.proxy,
             item.cookies,
             item.backupCodes,

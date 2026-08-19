@@ -29,6 +29,7 @@ const COLUMNS: Array<[string, string]> = [
   ['seed_phrase', 'TEXT'],
   ['phone_number', 'TEXT'],
   ['user_agent', 'TEXT'],
+  ['recovery_password', 'TEXT'],
 ];
 
 async function run() {

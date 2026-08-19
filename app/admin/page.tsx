@@ -180,6 +180,7 @@ export default function AdminPage() {
         promoExpiresAt: c.promo_expires_at || c.promoExpiresAt || null,
         totpSecret: c.totp_secret || c.totpSecret || null,
         recoveryEmail: c.recovery_email || c.recoveryEmail || null,
+        recoveryPassword: c.recovery_password || c.recoveryPassword || null,
         proxy: c.proxy || null,
         cookies: c.cookies || null,
         backupCodes: c.backup_codes || c.backupCodes || null,
@@ -1130,14 +1131,14 @@ export default function AdminPage() {
                   display: 'block',
                 }}
               >
-                Paste credentials — one per line: email|password|2FA secret|recovery email|proxy|cookies|backup codes|seed|phone|user-agent
+                Paste credentials — one per line: email|password|2FA secret|recovery email|recovery password|proxy|cookies|backup codes|seed|phone|user-agent
                 (everything after the proxy is optional)
               </label>
               <textarea
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
                 placeholder={
-                  'email@gmail.com|password|TOTP_SECRET|recovery@mail.com|ip:port:user:pass|[{"name":"SID","value":"..."}]|code1, code2, code3|word1 word2 ...|+33****0000 https://act.link|Mozilla/5.0 ...'
+                  'email@gmail.com|password|TOTP_SECRET|recovery@mail.com|recovery_pwd|ip:port:user:pass|[{"name":"SID","value":"..."}]|code1, code2, code3|word1 word2 ...|+33****0000 https://act.link|Mozilla/5.0 ...'
                 }
                 style={{
                   width: '100%',
@@ -1590,6 +1591,7 @@ export default function AdminPage() {
       );
     if (cred.seedPhrase) lines.push(`Recovery Seed: ${cred.seedPhrase}`);
     if (cred.recoveryEmail) lines.push(`Recovery Email: ${cred.recoveryEmail}`);
+    if (cred.recoveryPassword) lines.push(`Recovery Email Password: ${cred.recoveryPassword}`);
     if (cred.phoneNumber) lines.push(`Phone / Activation: ${cred.phoneNumber}`);
     if (cred.proxy) lines.push(`Proxy: ${cred.proxy}`);
     if (cred.userAgent) lines.push(`User-Agent: ${cred.userAgent}`);

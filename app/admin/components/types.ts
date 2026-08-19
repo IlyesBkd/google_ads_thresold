@@ -39,6 +39,7 @@ export interface Credential {
   promoExpiresAt: string | null;
   totpSecret?: string | null;
   recoveryEmail?: string | null;
+  recoveryPassword?: string | null;
   proxy?: string | null;
   cookies?: string | null;
   backupCodes?: string | null;
