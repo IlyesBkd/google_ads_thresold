@@ -111,6 +111,18 @@ export async function GET(request: NextRequest) {
       [days]
     );
 
+    const byCountry = await query<{ country: string; revenue: string; sales: string }>(
+      `SELECT COALESCE(country, '??') as country,
+              COALESCE(SUM(amount), 0) as revenue,
+              COUNT(*) as sales
+       FROM orders
+       WHERE status = 'delivered'
+         AND delivered_at >= CURRENT_DATE - make_interval(days => $1::int)
+       GROUP BY COALESCE(country, '??')
+       ORDER BY revenue DESC`,
+      [days]
+    );
+
     const promo = await query<{ with_promo: string; without_promo: string }>(
       `SELECT
          COUNT(*) FILTER (WHERE promo_code IS NOT NULL) as with_promo,
@@ -187,6 +199,11 @@ export async function GET(request: NextRequest) {
           units: n(r.units),
         })),
         byCoin: byCoin.map((r) => ({ coin: r.coin, revenue: n(r.revenue), sales: n(r.sales) })),
+        byCountry: byCountry.map((r) => ({
+          country: r.country,
+          revenue: n(r.revenue),
+          sales: n(r.sales),
+        })),
         promo: {
           withPromo: n(promo[0]?.with_promo),
           withoutPromo: n(promo[0]?.without_promo),

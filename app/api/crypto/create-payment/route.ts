@@ -19,7 +19,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { productId, quantity, customerEmail, coin, promoCode } = parsed.data;
+    const { productId, quantity, customerEmail, coin, promoCode, telegramUsername } = parsed.data;
+
+    // Vercel resolves the country at the edge, so no geo-IP lookup and no need
+    // to keep the address itself — the privacy policy promises we don't.
+    const country = request.headers.get('x-vercel-ip-country')?.slice(0, 2).toUpperCase() || null;
+    const telegram = telegramUsername.replace(/^@/, '');
 
     // Each order creation reserves stock, so an unthrottled caller could hold
     // the whole inventory hostage with junk checkouts.
@@ -69,9 +74,20 @@ export async function POST(request: NextRequest) {
     await execute(
       `INSERT INTO orders (
         id, product_id, quantity, customer_email,
-        amount, coin, status, promo_code, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
-      [orderId, productId, quantity, customerEmail, totalAmount, coin, 'pending', validPromoCode]
+        amount, coin, status, promo_code, country, telegram_username, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
+      [
+        orderId,
+        productId,
+        quantity,
+        customerEmail,
+        totalAmount,
+        coin,
+        'pending',
+        validPromoCode,
+        country,
+        telegram,
+      ]
     );
 
     // Hold the credentials for this order so a concurrent checkout cannot sell

@@ -219,6 +219,9 @@ export async function POST(request: NextRequest) {
           customerEmail: order.customer_email,
           promoCode: order.promo_code,
           delivered: deliveryResult.success,
+          country: (order as unknown as { country?: string | null }).country,
+          telegramUsername: (order as unknown as { telegram_username?: string | null })
+            .telegram_username,
         });
       } catch (error) {
         console.error('Telegram ops notification error:', error);

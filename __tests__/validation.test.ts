@@ -13,6 +13,7 @@ describe('createPaymentSchema', () => {
       quantity: 2,
       customerEmail: 'user@example.com',
       coin: 'BTC',
+      telegramUsername: 'buyer_01',
     });
     expect(result.success).toBe(true);
   });
@@ -23,6 +24,7 @@ describe('createPaymentSchema', () => {
       quantity: 1,
       customerEmail: 'not-an-email',
       coin: 'BTC',
+      telegramUsername: 'buyer_01',
     });
     expect(result.success).toBe(false);
   });
@@ -33,6 +35,7 @@ describe('createPaymentSchema', () => {
       quantity: 1,
       customerEmail: 'user@example.com',
       coin: 'DOGE',
+      telegramUsername: 'buyer_01',
     });
     expect(result.success).toBe(false);
   });
@@ -43,6 +46,7 @@ describe('createPaymentSchema', () => {
       quantity: 0,
       customerEmail: 'user@example.com',
       coin: 'ETH',
+      telegramUsername: 'buyer_01',
     });
     expect(result.success).toBe(false);
   });
@@ -53,8 +57,45 @@ describe('createPaymentSchema', () => {
       quantity: 101,
       customerEmail: 'user@example.com',
       coin: 'USDT',
+      telegramUsername: 'buyer_01',
     });
     expect(result.success).toBe(false);
+  });
+
+  // Telegram is required at checkout: it is how support and the 24h guarantee
+  // actually reach the buyer, and chasing it after a problem never works.
+  it('rejects a checkout with no Telegram username', () => {
+    const result = createPaymentSchema.safeParse({
+      productId: 'PROD-350',
+      quantity: 1,
+      customerEmail: 'user@example.com',
+      coin: 'BTC',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts a username typed with a leading @', () => {
+    const result = createPaymentSchema.safeParse({
+      productId: 'PROD-350',
+      quantity: 1,
+      customerEmail: 'user@example.com',
+      coin: 'BTC',
+      telegramUsername: '@buyer_01',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects a username with spaces or punctuation', () => {
+    for (const bad of ['two words', 'buyer!', 'a', 'buyer-01']) {
+      const result = createPaymentSchema.safeParse({
+        productId: 'PROD-350',
+        quantity: 1,
+        customerEmail: 'user@example.com',
+        coin: 'BTC',
+        telegramUsername: bad,
+      });
+      expect(result.success, bad).toBe(false);
+    }
   });
 });
 

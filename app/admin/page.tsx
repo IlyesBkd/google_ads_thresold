@@ -205,6 +205,8 @@ export default function AdminPage() {
           day: 'numeric',
         }),
         customer: o.customer_email || o.customer,
+        country: o.country || null,
+        telegramUsername: o.telegram_username || null,
         productId: o.product_id || o.productId,
         qty: o.quantity || o.qty,
         amount: o.amount / 100, // Convert cents to dollars
@@ -2440,6 +2442,41 @@ export default function AdminPage() {
 
           <div style={{ marginBottom: 28 }}>
             {infoRow('Customer', o.customer)}
+            {infoRow(
+              'Country',
+              o.country
+                ? `${String.fromCodePoint(...[...o.country].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65))} ${o.country}`
+                : 'not recorded'
+            )}
+            {o.telegramUsername ? (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: '10px 0',
+                  borderBottom: `1px solid ${COLORS.border}`,
+                }}
+              >
+                <span style={{ fontSize: 12, color: COLORS.textMuted }}>Telegram</span>
+                {/* Opens the profile so channel membership can be checked by
+                    hand — the Bot API cannot resolve a username to a user id. */}
+                <a
+                  href={`https://t.me/${o.telegramUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    fontSize: 13,
+                    color: COLORS.primary,
+                    fontFamily: 'var(--font-mono)',
+                    textDecoration: 'none',
+                  }}
+                >
+                  @{o.telegramUsername} ↗
+                </a>
+              </div>
+            ) : (
+              infoRow('Telegram', 'not recorded')
+            )}
             {infoRow('Product', getProductName(o.productId))}
             {infoRow('Quantity', String(o.qty))}
             {infoRow('Amount', `$${o.amount} ${o.coin}`)}

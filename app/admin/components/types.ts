@@ -63,6 +63,8 @@ export interface Order {
   paidAt: string;
   deliveredAt: string;
   deliveredCredentials: string[];
+  country: string | null;
+  telegramUsername: string | null;
 }
 
 export interface LogEntry {

@@ -291,6 +291,12 @@ export default function CheckoutModal({
       return;
     }
 
+    const telegram = telegramUsername.trim().replace(/^@/, '');
+    if (!/^[a-zA-Z0-9_]{2,64}$/.test(telegram)) {
+      setError('Please enter your Telegram username — letters, numbers and _ only');
+      return;
+    }
+
     track('checkout_email_entered', { product_id: checkout.id, quantity, coin: payMethod });
 
     if (quantity < 1) {
@@ -315,6 +321,7 @@ export default function CheckoutModal({
           quantity: quantity,
           customerEmail: email,
           coin: payMethod,
+          telegramUsername: telegram,
           promoCode: promoCode.trim() || undefined,
         }),
       });
@@ -687,7 +694,58 @@ export default function CheckoutModal({
                 }}
               />
               <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#6A6A6A' }}>
-                We'll send your account credentials to this email
+                We&apos;ll send your account credentials to this email
+              </p>
+            </div>
+
+            {/* Telegram is where support actually happens, so it is collected
+                up front rather than chased after a problem. */}
+            <div style={{ marginTop: '20px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '13px',
+                  color: '#9A9A9A',
+                  marginBottom: '8px',
+                }}
+              >
+                Your Telegram
+              </label>
+              <div style={{ position: 'relative' }}>
+                <span
+                  style={{
+                    position: 'absolute',
+                    left: '14px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    fontSize: '14px',
+                    color: '#6A6A6A',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  @
+                </span>
+                <input
+                  type="text"
+                  value={telegramUsername}
+                  onChange={(e) => setTelegramUsername(e.target.value.replace(/^@/, ''))}
+                  placeholder="username"
+                  onKeyDown={(e) => e.key === 'Enter' && handleEmailSubmit()}
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px 12px 30px',
+                    background: '#080808',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '10px',
+                    color: '#F5F5F5',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+              <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#6A6A6A' }}>
+                How we reach you for support and your 24h guarantee
               </p>
             </div>
 

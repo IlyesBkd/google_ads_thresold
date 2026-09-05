@@ -6,6 +6,13 @@ export const createPaymentSchema = z.object({
   customerEmail: z.string().email(),
   coin: z.enum(['BTC', 'ETH', 'USDT', 'btc', 'eth', 'usdttrc20']),
   promoCode: z.string().max(32).optional(),
+  // Asked for at checkout so a buyer can be matched against the Telegram
+  // channel. Stored as typed, minus a leading @.
+  telegramUsername: z
+    .string()
+    .min(2)
+    .max(64)
+    .regex(/^@?[a-zA-Z0-9_]+$/, 'Invalid Telegram username'),
 });
 
 export const waitlistSchema = z

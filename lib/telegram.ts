@@ -162,6 +162,8 @@ export async function notifyTelegramOpsSale(details: {
   customerEmail: string;
   promoCode?: string | null;
   delivered: boolean;
+  country?: string | null;
+  telegramUsername?: string | null;
 }): Promise<void> {
   const token = process.env.TELEGRAM_OPS_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_OPS_CHAT_ID;
@@ -223,6 +225,19 @@ export async function notifyTelegramOpsSale(details: {
     `📧 ${details.customerEmail}`,
     `🆔 <code>${details.orderId}</code>`,
   ];
+
+  if (details.country) {
+    const flag = /^[A-Z]{2}$/.test(details.country)
+      ? String.fromCodePoint(...[...details.country].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65))
+      : '🏳️';
+    lines.push(`${flag} ${details.country}`);
+  }
+
+  if (details.telegramUsername) {
+    lines.push(
+      `💬 <a href="https://t.me/${details.telegramUsername}">@${details.telegramUsername}</a>`
+    );
+  }
 
   if (details.promoCode) {
     lines.push(`🎟️ Code promo <code>${details.promoCode}</code> (-3%)`);

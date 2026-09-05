@@ -28,6 +28,7 @@ export interface AnalyticsData {
   funnel: { started: number; paid: number; delivered: number; abandoned: number };
   byProduct: { name: string; revenue: number; sales: number; units: number }[];
   byCoin: { coin: string; revenue: number; sales: number }[];
+  byCountry: { country: string; revenue: number; sales: number }[];
   promo: { withPromo: number; withoutPromo: number };
   claims: { total: number; open: number };
   medianDeliverySeconds: number | null;
@@ -42,6 +43,12 @@ function duration(seconds: number | null): string {
   if (seconds < 90) return `${Math.round(seconds)}s`;
   if (seconds < 5400) return `${Math.round(seconds / 60)}min`;
   return `${(seconds / 3600).toFixed(1)}h`;
+}
+
+/** ISO-3166 alpha-2 to its flag emoji. '??' means the order predates capture. */
+function flag(code: string): string {
+  if (!/^[A-Z]{2}$/.test(code)) return '🏳️';
+  return String.fromCodePoint(...[...code].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
 }
 
 const label: React.CSSProperties = {
@@ -254,7 +261,7 @@ export default function AnalyticsPage({
     );
   }
 
-  const { totals, funnel, series, byProduct, byCoin, promo, claims } = data;
+  const { totals, funnel, series, byProduct, byCoin, byCountry, promo, claims } = data;
 
   const revenueDelta =
     totals.prevRevenue > 0
@@ -425,6 +432,26 @@ export default function AnalyticsPage({
             }))}
             colorFrom={1}
           />
+        </div>
+
+        <div style={card}>
+          <div style={{ ...label, marginBottom: 18 }}>Revenue by country</div>
+          <BarList
+            rows={byCountry.map((c) => ({
+              key: c.country === '??' ? '🏳️ Not recorded' : `${flag(c.country)} ${c.country}`,
+              value: c.revenue,
+              caption: `${usd(c.revenue)} · ${c.sales}`,
+            }))}
+            colorFrom={3}
+          />
+          {byCountry.some((c) => c.country === '??') && (
+            <div
+              style={{ marginTop: 14, fontSize: 11.5, color: COLORS.textMuted, lineHeight: 1.5 }}
+            >
+              Country is recorded from the checkout onward — orders placed before that show as not
+              recorded.
+            </div>
+          )}
         </div>
 
         <div style={card}>
