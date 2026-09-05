@@ -62,16 +62,19 @@ describe('createPaymentSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  // Telegram is required at checkout: it is how support and the 24h guarantee
-  // actually reach the buyer, and chasing it after a problem never works.
-  it('rejects a checkout with no Telegram username', () => {
-    const result = createPaymentSchema.safeParse({
-      productId: 'PROD-350',
-      quantity: 1,
-      customerEmail: 'user@example.com',
-      coin: 'BTC',
-    });
-    expect(result.success).toBe(false);
+  // Telegram is optional: a required field here is friction on the one flow
+  // that makes money. Absent, null and blank all mean "not given".
+  it('accepts a checkout with no Telegram username', () => {
+    for (const value of [undefined, null, '', '   ']) {
+      const result = createPaymentSchema.safeParse({
+        productId: 'PROD-350',
+        quantity: 1,
+        customerEmail: 'user@example.com',
+        coin: 'BTC',
+        ...(value === undefined ? {} : { telegramUsername: value }),
+      });
+      expect(result.success, String(value)).toBe(true);
+    }
   });
 
   it('accepts a username typed with a leading @', () => {
@@ -85,7 +88,7 @@ describe('createPaymentSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('rejects a username with spaces or punctuation', () => {
+  it('still rejects a malformed username when one is given', () => {
     for (const bad of ['two words', 'buyer!', 'a', 'buyer-01']) {
       const result = createPaymentSchema.safeParse({
         productId: 'PROD-350',

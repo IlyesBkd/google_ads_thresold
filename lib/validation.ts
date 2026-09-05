@@ -7,12 +7,18 @@ export const createPaymentSchema = z.object({
   coin: z.enum(['BTC', 'ETH', 'USDT', 'btc', 'eth', 'usdttrc20']),
   promoCode: z.string().max(32).optional(),
   // Asked for at checkout so a buyer can be matched against the Telegram
-  // channel. Stored as typed, minus a leading @.
-  telegramUsername: z
-    .string()
-    .min(2)
-    .max(64)
-    .regex(/^@?[a-zA-Z0-9_]+$/, 'Invalid Telegram username'),
+  // channel, but optional: a required field here is friction on the one flow
+  // that makes money. Blank and null both mean "not given"; anything else is
+  // still format-checked.
+  telegramUsername: z.preprocess(
+    (v) => (v == null || (typeof v === 'string' && v.trim() === '') ? undefined : v),
+    z
+      .string()
+      .min(2)
+      .max(64)
+      .regex(/^@?[a-zA-Z0-9_]+$/, 'Invalid Telegram username')
+      .optional()
+  ),
 });
 
 export const waitlistSchema = z

@@ -291,9 +291,10 @@ export default function CheckoutModal({
       return;
     }
 
+    // Optional: only validated when the buyer actually typed something.
     const telegram = telegramUsername.trim().replace(/^@/, '');
-    if (!/^[a-zA-Z0-9_]{2,64}$/.test(telegram)) {
-      setError('Please enter your Telegram username — letters, numbers and _ only');
+    if (telegram && !/^[a-zA-Z0-9_]{2,64}$/.test(telegram)) {
+      setError('Telegram username: letters, numbers and _ only — or leave it blank');
       return;
     }
 
@@ -321,7 +322,7 @@ export default function CheckoutModal({
           quantity: quantity,
           customerEmail: email,
           coin: payMethod,
-          telegramUsername: telegram,
+          telegramUsername: telegram || undefined,
           promoCode: promoCode.trim() || undefined,
         }),
       });
@@ -709,7 +710,7 @@ export default function CheckoutModal({
                   marginBottom: '8px',
                 }}
               >
-                Your Telegram
+                Your Telegram <span style={{ color: '#6A6A6A' }}>(optional)</span>
               </label>
               <div style={{ position: 'relative' }}>
                 <span
@@ -745,7 +746,7 @@ export default function CheckoutModal({
                 />
               </div>
               <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#6A6A6A' }}>
-                How we reach you for support and your 24h guarantee
+                Faster support and quicker guarantee handling — email works too
               </p>
             </div>
 

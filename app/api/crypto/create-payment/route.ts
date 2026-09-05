@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     // Vercel resolves the country at the edge, so no geo-IP lookup and no need
     // to keep the address itself — the privacy policy promises we don't.
     const country = request.headers.get('x-vercel-ip-country')?.slice(0, 2).toUpperCase() || null;
-    const telegram = telegramUsername.replace(/^@/, '');
+    const telegram = telegramUsername ? telegramUsername.replace(/^@/, '') : null;
 
     // Each order creation reserves stock, so an unthrottled caller could hold
     // the whole inventory hostage with junk checkouts.
