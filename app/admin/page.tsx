@@ -153,9 +153,12 @@ export default function AdminPage() {
         price: p.price,
         thresholdValue: p.threshold_value || p.thresholdValue,
         category: p.category,
-        totalImported: p.total_imported || p.totalImported || 0,
-        sold: p.sold || 0,
-        remaining: p.remaining || 0,
+        // The API returns stock_* counts; the older names below never existed
+        // in the response, so every product silently read as 0 in stock.
+        totalImported: p.stock_total ?? p.total_imported ?? p.totalImported ?? 0,
+        sold: p.stock_sold ?? p.sold ?? 0,
+        remaining: p.stock_available ?? p.remaining ?? 0,
+        reserved: p.stock_reserved ?? 0,
         lowStockAlert: p.low_stock_alert || p.lowStockAlert || 5,
         active: p.active,
       }));
@@ -756,7 +759,7 @@ export default function AdminPage() {
                     fontFamily: 'var(--font-mono)',
                   }}
                 >
-                  ${product.thresholdValue}
+                  €{product.thresholdValue}
                 </td>
                 <td
                   style={{
@@ -780,6 +783,9 @@ export default function AdminPage() {
                   }}
                 >
                   {product.remaining}
+                  {product.reserved > 0 && (
+                    <span style={{ color: COLORS.yellow }}> +{product.reserved} held</span>
+                  )}
                 </td>
                 <td style={{ padding: '14px 16px' }}>
                   <button

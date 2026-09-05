@@ -23,6 +23,7 @@ export interface Product {
   totalImported: number;
   sold: number;
   remaining: number;
+  reserved: number;
   lowStockAlert: number;
   active: boolean;
 }
