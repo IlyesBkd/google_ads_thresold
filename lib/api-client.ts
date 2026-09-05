@@ -175,6 +175,16 @@ class ApiClient {
     return this.request(`/analytics?days=${days}`);
   }
 
+  // ─── Feedback requests ────────────────────────────────────────────────────
+
+  async previewFeedback() {
+    return this.request('/feedback');
+  }
+
+  async sendFeedback() {
+    return this.request('/feedback', { method: 'POST' });
+  }
+
   // ─── Google Sheets ────────────────────────────────────────────────────────
 
   async getSheetsStatus() {

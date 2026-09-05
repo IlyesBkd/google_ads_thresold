@@ -63,6 +63,11 @@ export default function AdminPage() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [analyticsDays, setAnalyticsDays] = useState(30);
 
+  // Feedback requests to past buyers
+  const [feedbackCandidates, setFeedbackCandidates] = useState<
+    { email: string; productName: string; daysSinceDelivery: number; orders: number }[] | null
+  >(null);
+
   // Google Sheets link
   const [sheetsStatus, setSheetsStatus] = useState<{
     ok: boolean;
@@ -398,6 +403,9 @@ export default function AdminPage() {
     if (!loggedIn || currentPage !== 'settings') return;
     api.getSheetsStatus().then((r) => {
       if (r.success) setSheetsStatus(r.data as typeof sheetsStatus);
+    });
+    api.previewFeedback().then((r) => {
+      if (r.success) setFeedbackCandidates(r.data as typeof feedbackCandidates);
     });
   }, [loggedIn, currentPage]);
 
@@ -1133,8 +1141,9 @@ export default function AdminPage() {
                   display: 'block',
                 }}
               >
-                Paste credentials — one per line: email|password|2FA secret|recovery email|recovery password|proxy|cookies|backup codes|seed|phone|user-agent
-                (everything after the proxy is optional)
+                Paste credentials — one per line: email|password|2FA secret|recovery email|recovery
+                password|proxy|cookies|backup codes|seed|phone|user-agent (everything after the
+                proxy is optional)
               </label>
               <textarea
                 value={importText}
@@ -1396,9 +1405,7 @@ export default function AdminPage() {
                     />
                   </td>
                   <td
-                    onClick={() =>
-                      showCredentials && copyCredential(fullCredentialText(cred))
-                    }
+                    onClick={() => showCredentials && copyCredential(fullCredentialText(cred))}
                     title={showCredentials ? 'Click to copy' : undefined}
                     style={{
                       padding: '12px 16px',
@@ -1533,6 +1540,30 @@ export default function AdminPage() {
       }
     } else {
       showToast(response.error || 'Failed to update order');
+    }
+    setLoading(false);
+  };
+
+  const sendFeedbackRequests = async () => {
+    const n = feedbackCandidates?.length ?? 0;
+    if (n === 0) return;
+
+    // Outbound mail to real customers — worth one deliberate confirmation.
+    if (
+      !confirm(`Email ${n} past buyer${n > 1 ? 's' : ''} to ask how their account is working out?`)
+    )
+      return;
+
+    setLoading(true);
+    const response = await api.sendFeedback();
+
+    if (response.success) {
+      const { sent, failed } = response.data as { sent: number; failed: number };
+      showToast(failed > 0 ? `${sent} sent, ${failed} failed` : `${sent} feedback request(s) sent`);
+      const refreshed = await api.previewFeedback();
+      if (refreshed.success) setFeedbackCandidates(refreshed.data as typeof feedbackCandidates);
+    } else {
+      showToast(response.error || 'Could not send feedback requests');
     }
     setLoading(false);
   };
@@ -1834,6 +1865,86 @@ export default function AdminPage() {
 
     return (
       <div>
+        {/* Feedback requests */}
+        <div style={{ ...cardStyle, marginBottom: 20 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: COLORS.text, marginBottom: 8 }}>
+            Ask buyers for feedback
+          </div>
+          <div
+            style={{
+              fontSize: 12.5,
+              color: COLORS.textSecondary,
+              lineHeight: 1.6,
+              marginBottom: 16,
+            }}
+          >
+            A short note asking how the account is working out. Replies come back to{' '}
+            <strong style={{ color: COLORS.text }}>support@gadscale.com</strong>. Each buyer is
+            asked once, and only at least 3 days after delivery — long enough to have actually used
+            it.
+          </div>
+
+          {feedbackCandidates === null ? (
+            <div style={{ fontSize: 12.5, color: COLORS.textMuted }}>Loading…</div>
+          ) : feedbackCandidates.length === 0 ? (
+            <div style={{ fontSize: 12.5, color: COLORS.textMuted }}>
+              Nobody to ask right now — everyone eligible has already been contacted.
+            </div>
+          ) : (
+            <>
+              <div
+                style={{
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: 10,
+                  overflow: 'hidden',
+                  marginBottom: 14,
+                }}
+              >
+                {feedbackCandidates.map((c) => (
+                  <div
+                    key={c.email}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                      padding: '9px 12px',
+                      borderBottom: `1px solid ${COLORS.border}`,
+                      fontSize: 12.5,
+                    }}
+                  >
+                    <span style={{ color: COLORS.text, fontFamily: 'var(--font-mono)' }}>
+                      {c.email}
+                    </span>
+                    <span style={{ color: COLORS.textMuted, whiteSpace: 'nowrap' }}>
+                      {c.daysSinceDelivery}d ago
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={sendFeedbackRequests}
+                disabled={loading}
+                style={{
+                  padding: '8px 14px',
+                  background: COLORS.primary,
+                  border: `1px solid ${COLORS.primary}`,
+                  borderRadius: 8,
+                  color: '#fff',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font-inter)',
+                  opacity: loading ? 0.5 : 1,
+                }}
+              >
+                ✉ Ask {feedbackCandidates.length} buyer
+                {feedbackCandidates.length > 1 ? 's' : ''}
+              </button>
+            </>
+          )}
+        </div>
+
         {/* Google Sheets */}
         <div style={{ ...cardStyle, marginBottom: 20 }}>
           <div

@@ -18,6 +18,8 @@ function getResend(): Resend {
 // mailbox that is actually read rather than a no-reply black hole.
 const FROM_EMAIL =
   process.env.RESEND_FROM || process.env.EMAIL_FROM || 'GADSCALE <support@gadscale.com>';
+// Replies go to a real inbox — support@ is redirected to the owner's mailbox.
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'support@gadscale.com';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 /**
@@ -129,6 +131,94 @@ function getAbandonedEmailHtml(productName: string, priceLabel: string) {
 
     <p style="margin: 24px 0 0; font-size: 12.5px; line-height: 1.6; color: #6A6A6A; text-align: center;">
       This is the only reminder we'll send for this order.
+    </p>
+
+  </div>
+</body>
+</html>
+  `.trim();
+}
+
+/**
+ * Ask a buyer what they thought of the account they received.
+ *
+ * Deliberately plain: a short personal note asking for a reply beats a rating
+ * widget nobody clicks, and the reply lands in the support mailbox.
+ */
+export async function sendFeedbackRequestEmail(
+  customerEmail: string,
+  productName: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await getResend().emails.send({
+      from: FROM_EMAIL,
+      to: customerEmail,
+      replyTo: SUPPORT_EMAIL,
+      subject: `How is your ${productName} working out?`,
+      html: getFeedbackEmailHtml(productName),
+      text: [
+        `Hi,`,
+        ``,
+        `You bought a ${productName} from us recently, and I'd like to know how it went.`,
+        ``,
+        `Did the account work as expected? Is the threshold behaving the way you needed?`,
+        `Anything that annoyed you?`,
+        ``,
+        `Just hit reply — it comes straight to me, and one line is plenty.`,
+        ``,
+        `Thanks,`,
+        `GADSCALE`,
+        ``,
+        `Don't want messages like this? Reply "stop" and I won't ask again.`,
+      ].join('\n'),
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Feedback email error:', error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+function getFeedbackEmailHtml(productName: string) {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How did it go?</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #080808; color: #FAFAFA;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+
+    <div style="text-align: center; margin-bottom: 32px;">
+      <span style="font-size: 20px; font-weight: 600; letter-spacing: -0.02em; color: #F5F5F5;">GADSCALE</span>
+    </div>
+
+    <div style="background: #0C0C0C; border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 32px;">
+      <h1 style="margin: 0 0 18px; font-size: 23px; font-weight: 600; letter-spacing: -0.02em; color: #FAFAFA;">
+        How is it working out?
+      </h1>
+
+      <p style="margin: 0 0 18px; font-size: 15px; line-height: 1.65; color: #9A9A9A;">
+        You picked up a <strong style="color: #FAFAFA;">${productName}</strong> from us recently,
+        and I'd genuinely like to know how it went.
+      </p>
+
+      <ul style="margin: 0 0 18px; padding-left: 20px; font-size: 15px; line-height: 1.7; color: #9A9A9A;">
+        <li>Did the account work as expected?</li>
+        <li>Is the billing threshold behaving the way you needed?</li>
+        <li>Anything that annoyed you along the way?</li>
+      </ul>
+
+      <p style="margin: 0; font-size: 15px; line-height: 1.65; color: #9A9A9A;">
+        Just hit reply — it comes straight to me, and one line is plenty.
+      </p>
+    </div>
+
+    <p style="margin: 24px 0 0; font-size: 12.5px; line-height: 1.6; color: #6A6A6A; text-align: center;">
+      Don't want messages like this? Reply &quot;stop&quot; and I won't ask again.
     </p>
 
   </div>
