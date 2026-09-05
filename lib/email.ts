@@ -14,7 +14,10 @@ function getResend(): Resend {
   return _resend;
 }
 
-const FROM_EMAIL = process.env.RESEND_FROM || process.env.EMAIL_FROM || 'noreply@gadscale.com';
+// Customers reply to delivery and guarantee emails, so the sender is a
+// mailbox that is actually read rather than a no-reply black hole.
+const FROM_EMAIL =
+  process.env.RESEND_FROM || process.env.EMAIL_FROM || 'GADSCALE <support@gadscale.com>';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 /**
